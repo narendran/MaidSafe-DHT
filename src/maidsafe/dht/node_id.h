@@ -153,10 +153,32 @@ class NodeId {
   const NodeId operator ^ (const NodeId &rhs) const;
 
  private:
+  friend class boost::serialization::access;
+  template <typename Archive>
+  void serialize(Archive &archive, const unsigned int& /*version*/);  // NOLINT (Prakash)
   std::string EncodeToBinary() const;
   void DecodeFromBinary(const std::string &binary_id);
   std::string raw_id_;
 };
+
+#ifdef __MSVC__
+#  pragma warning(disable: 4127)
+#endif
+template <typename Archive>
+void NodeId::serialize(Archive &archive,                     // NOLINT (Fraser)
+                       const unsigned int& /*version*/) {
+  std::string node_id;
+  if (Archive::is_saving::value) {
+    node_id = maidsafe::EncodeToBase64(raw_id_);
+  }
+  archive& boost::serialization::make_nvp("node_id", node_id);
+  if (Archive::is_loading::value) {
+    raw_id_ = maidsafe::DecodeFromBase64(node_id);
+  }
+#ifdef __MSVC__
+#  pragma warning(default: 4127)
+#endif
+}
 
 /** Returns an abbreviated hex representation of node_id */
 std::string DebugId(const NodeId &node_id);
@@ -164,37 +186,5 @@ std::string DebugId(const NodeId &node_id);
 }  // namespace dht
 
 }  // namespace maidsafe
-
-
-
-namespace mk = maidsafe::dht;
-
-namespace boost {
-
-namespace serialization {
-
-#ifdef __MSVC__
-#  pragma warning(disable: 4127)
-#endif
-template <typename Archive>
-void serialize(Archive &archive,                              // NOLINT (Fraser)
-               mk::NodeId &node_id,
-               const unsigned int& /*version*/) {
-  std::string node_id_local;
-  if (Archive::is_saving::value) {
-    node_id_local = (node_id.ToStringEncoded(mk::NodeId::kBase64));
-  }
-  archive& boost::serialization::make_nvp("node_id", node_id_local);
-  if (Archive::is_loading::value) {
-    node_id = mk::NodeId(node_id_local, mk::NodeId::kBase64);
-  }
-#ifdef __MSVC__
-#  pragma warning(default: 4127)
-#endif
-}
-
-}  // namespace serialization
-
-}  // namespace boost
 
 #endif  // MAIDSAFE_DHT_NODE_ID_H_

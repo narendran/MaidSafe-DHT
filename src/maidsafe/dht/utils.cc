@@ -49,10 +49,6 @@ using transport::Endpoint;
 
 namespace dht {
 
-bool IsValid(const Endpoint &endpoint) {
-  return !(endpoint.ip == transport::IP() || endpoint.port == 0);
-}
-
 bool HasId(const Contact &contact, const NodeId &node_id) {
   return contact.node_id() == node_id;
 }

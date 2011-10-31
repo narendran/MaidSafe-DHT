@@ -25,12 +25,18 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "boost/archive/xml_iarchive.hpp"
+#include "boost/archive/xml_oarchive.hpp"
+#include "boost/filesystem.hpp"
+
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
+
 #include "maidsafe/transport/utils.h"
 
 #include "maidsafe/dht/contact.h"
+#include "maidsafe/dht/log.h"
 #ifdef __MSVC__
 #  pragma warning(push)
 #  pragma warning(disable: 4127 4244 4267)
@@ -89,6 +95,30 @@ class ContactTest : public testing::Test {
   std::vector<transport::Endpoint> locals_, direct_connected_locals_;
   Contact contact_, rv_contact_, direct_connected_contact_;
 };
+
+bool WriteToFile(std::vector<Contact> *contacts, const std::string &filename) {
+  try {
+    std::ofstream ofs(filename);
+    boost::archive::xml_oarchive oa(ofs);
+    oa << boost::serialization::make_nvp("contacts", *contacts);
+  } catch(const std::exception &e) {
+    DLOG(WARNING) << "Exception: " << e.what();
+    return false;
+  }
+  return true;
+}
+
+bool ReadFromFile(std::vector<Contact> *contacts, const std::string &filename) {
+  try {
+    std::ifstream ifs(filename);
+    boost::archive::xml_iarchive ia(ifs);
+    ia >> boost::serialization::make_nvp("contacts", *contacts);
+  } catch(const std::exception &e) {
+    DLOG(WARNING) << "Exception: " << e.what();
+    return false;
+  }
+  return true;
+}
 
 testing::AssertionResult ContactDetails(const Contact &contact,
                                         const NodeId &node_id,
@@ -416,6 +446,41 @@ TEST_F(ContactTest, BEH_RemoveContact) {
   EXPECT_TRUE(RemoveContact(NodeId(crypto::Hash<crypto::SHA512>("bbb")),
                             &contacts));
   EXPECT_EQ(2U, contacts.size());
+}
+
+TEST_F(ContactTest, BEH_ContactSerialization) {
+  boost::system::error_code error_code;
+  std::string path("maidsafe/dht/" +
+                   (maidsafe::EncodeToBase32(RandomString(10U))));
+  fs::path file_path = fs::temp_directory_path() / path;
+  fs::create_directories(file_path, error_code);
+  ASSERT_EQ(0, error_code.value());
+  std::string file(file_path.string() + "/contacts.xml");
+
+  transport::Endpoint endpoint1("192.168.1.48", 8891);
+  transport::Endpoint endpoint2("192.168.1.44", 8896);
+  std::vector<transport::Endpoint> locals(1,
+      transport::Endpoint("192.168.1.56", 8889));
+  std::vector<transport::Endpoint> locals2(1,
+      transport::Endpoint("192.168.1.57", 8890));
+  transport::Endpoint rv_endpoint("192.168.1.58", 8891);
+  transport::Endpoint rv_endpoint2("192.168.1.59", 8892);
+  Contact contact1(kNodeId_, kEndpoint_, locals, transport::Endpoint(), false,
+                   false, "aaa", "bbb", "ccc");
+  Contact contact2(NodeId(crypto::Hash<crypto::SHA512>("5612348")), kEndpoint_,
+                   locals2, rv_endpoint2, false, false,
+                   "ddd", "eee", "fff");
+  std::vector<maidsafe::dht::Contact> contacts;
+  contacts.push_back(contact1);
+  contacts.push_back(contact2);
+  EXPECT_TRUE(WriteToFile(&contacts, file));
+  contacts.clear();
+  ASSERT_EQ(0U, contacts.size());
+  EXPECT_TRUE(ReadFromFile(&contacts, file));
+  ASSERT_EQ(2U, contacts.size());
+  EXPECT_EQ(contacts.at(0), contact1);
+  EXPECT_EQ(contacts.at(1), contact2);
+  fs::remove_all(file_path);
 }
 
 }  // namespace test

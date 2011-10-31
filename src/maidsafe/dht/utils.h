@@ -42,8 +42,6 @@ class NodeId;
 
 namespace protobuf { class Contact; }
 
-bool IsValid(const transport::Endpoint &endpoint);
-
 bool HasId(const Contact &contact, const NodeId &node_id);
 
 Contact FromProtobuf(const protobuf::Contact &protobuf_contact);

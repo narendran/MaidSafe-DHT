@@ -29,16 +29,25 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 
-#include "maidsafe/dht/contact_impl.h"
 #include "maidsafe/dht/utils.h"
 
 namespace maidsafe {
 
 namespace dht {
 
-Contact::Contact() : pimpl_(new Contact::Impl) {}
+Contact::Contact()
+    : transport::Contact(),
+      node_id_(),
+      public_key_id_(),
+      public_key_(),
+      other_info_() {}
 
-Contact::Contact(const Contact &other) : pimpl_(new Contact::Impl(other)) {}
+Contact::Contact(const Contact &other)
+    : transport::Contact(other),
+      node_id_(other.node_id_),
+      public_key_id_(other.public_key_id_),
+      public_key_(other.public_key_),
+      other_info_(other.other_info_) {}
 
 Contact::Contact(const NodeId &node_id,
                  const transport::Endpoint &endpoint,
@@ -49,88 +58,80 @@ Contact::Contact(const NodeId &node_id,
                  const std::string &public_key_id,
                  const std::string &public_key,
                  const std::string &other_info)
-    : pimpl_(new Contact::Impl(node_id, endpoint, local_endpoints,
-                               rendezvous_endpoint, tcp443, tcp80,
-                               public_key_id, public_key, other_info)) {}
+    : transport::Contact(endpoint, local_endpoints, rendezvous_endpoint, tcp443,
+                         tcp80),
+      node_id_(node_id),
+      public_key_id_(public_key_id),
+      public_key_(public_key),
+      other_info_(other_info) {
+  Init();
+}
+
+void Contact::Init() {
+  if (!node_id_.IsValid() || !transport::Contact::Init())
+    return Clear();
+}
+
+void Contact::Clear() {
+  transport::Contact::Clear();
+  node_id_ = NodeId();
+}
 
 Contact::~Contact() {}
 
 NodeId Contact::node_id() const {
-  return pimpl_->node_id();
-}
-
-transport::Endpoint Contact::endpoint() const {
-  return pimpl_->endpoint();
-}
-
-std::vector<transport::Endpoint> Contact::local_endpoints() const {
-  return pimpl_->local_endpoints();
-}
-
-transport::Endpoint Contact::rendezvous_endpoint() const {
-  return pimpl_->rendezvous_endpoint();
-}
-
-transport::Endpoint Contact::tcp443endpoint() const {
-  return pimpl_->tcp443endpoint();
-}
-
-transport::Endpoint Contact::tcp80endpoint() const {
-  return pimpl_->tcp80endpoint();
+  return node_id_;
 }
 
 std::string Contact::public_key_id() const {
-  return pimpl_->public_key_id();
+  return public_key_id_;
 }
 
 std::string Contact::public_key() const {
-  return pimpl_->public_key();
+  return public_key_;
 }
 
 std::string Contact::other_info() const {
-  return pimpl_->other_info();
-}
-
-bool Contact::SetPreferredEndpoint(const transport::IP &ip) {
-  return pimpl_->SetPreferredEndpoint(ip);
-}
-
-transport::Endpoint Contact::PreferredEndpoint() const {
-  return pimpl_->PreferredEndpoint();
-}
-
-bool Contact::IsDirectlyConnected() const {
-  return pimpl_->IsDirectlyConnected();
+  return other_info_;
 }
 
 Contact& Contact::operator=(const Contact &other) {
-  if (this != &other)
-    *pimpl_ = *other.pimpl_;
+  if (this != &other) {
+    transport::Contact::operator=(other);
+    node_id_ = other.node_id_;
+    public_key_id_ = other.public_key_id_;
+    public_key_ = other.public_key_;
+    other_info_ = other.other_info_;
+  }
   return *this;
 }
 
 bool Contact::operator==(const Contact &other) const {
-  return *pimpl_ == *other.pimpl_;
+  if (node_id_ == other.node_id_)
+    return (node_id_.String() != kZeroId) ||
+           (endpoint_.ip == other.endpoint_.ip);
+  else
+    return false;
 }
 
 bool Contact::operator!=(const Contact &other) const {
-  return *pimpl_ != *other.pimpl_;
+  return !(*this == other);
 }
 
 bool Contact::operator<(const Contact &other) const {
-  return *pimpl_ < *other.pimpl_;
+  return node_id_ < other.node_id_;
 }
 
 bool Contact::operator>(const Contact &other) const {
-  return *pimpl_ > *other.pimpl_;
+  return node_id_ > other.node_id_;
 }
 
 bool Contact::operator<=(const Contact &other) const {
-  return *pimpl_ <= *other.pimpl_;
+  return (node_id_ < other.node_id_ || (*this == other));
 }
 
 bool Contact::operator>=(const Contact &other) const {
-  return *pimpl_ >= *other.pimpl_;
+  return (node_id_ > other.node_id_ || (*this == other));
 }
 
 std::string DebugId(const Contact &contact) {
