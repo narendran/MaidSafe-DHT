@@ -1502,6 +1502,33 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageDownlist) {
   ASSERT_EQ(1U, total);
 }
 
+TEST_F(KademliaMessageHandlerTest, BEH_MakeSerialisedWrapperMessage) {
+  std::string payload(RandomString(5 * 1024));
+  EXPECT_EQ("",
+            msg_hndlr_no_securifier_.MakeSerialisedWrapperMessage(
+                0, payload, kAsymmetricEncrypt, rsa_keypair_.public_key()));
+  EXPECT_EQ("",
+            msg_hndlr_no_securifier_.MakeSerialisedWrapperMessage(
+                0, payload, kSignAndAsymEncrypt,
+                rsa_keypair_.public_key()));
+
+  EXPECT_EQ("", msg_hndlr_.MakeSerialisedWrapperMessage(0,
+                                                         payload,
+                                                         kAsymmetricEncrypt,
+                                                         ""));
+  EXPECT_EQ("", msg_hndlr_.MakeSerialisedWrapperMessage(0,
+                                                         payload,
+                                                         kSignAndAsymEncrypt,
+                                                         ""));
+
+  EXPECT_NE("", msg_hndlr_.MakeSerialisedWrapperMessage(
+                    0, payload, kAsymmetricEncrypt,
+                    rsa_keypair_.public_key()));
+  EXPECT_NE("", msg_hndlr_.MakeSerialisedWrapperMessage(
+                    0, payload, kSignAndAsymEncrypt,
+                    rsa_keypair_.public_key()));
+}
+
 TEST_F(KademliaMessageHandlerTest, FUNC_ThreadedMessageHandling) {
   ConnectToHandlerSignals();
   InitialiseMap();

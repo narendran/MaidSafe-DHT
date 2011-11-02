@@ -26,10 +26,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "maidsafe/dht/message_handler.h"
-
 #include "boost/lexical_cast.hpp"
+#include "maidsafe/dht/log.h"
 #include "maidsafe/common/securifier.h"
-
 #ifdef __MSVC__
 #  pragma warning(push)
 #  pragma warning(disable: 4127 4244 4267)
@@ -42,6 +41,43 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace maidsafe {
 
 namespace dht {
+
+void MessageHandler::OnMessageReceived(const std::string &request,
+                                       const transport::Info &info,
+                                       std::string *response,
+                                       transport::Timeout *timeout) {
+  if (request.empty())
+    return;
+  SecurityType security_type = request.at(0);
+  if (security_type && !securifier_)
+    return;
+
+  std::string serialised_message(request.substr(1));
+  if (security_type & kAsymmetricEncrypt) {
+    std::string aes_seed = request.substr(1, 512);
+    if (aes_seed.size() != 512)
+      return;
+
+    std::string encrypt_aes_seed = securifier_->AsymmetricDecrypt(aes_seed);
+    if (encrypt_aes_seed.empty()) {
+      DLOG(WARNING) << "Failed to decrypt: encrypt_aes_seed is empty.";
+      return;
+    }
+
+    std::string aes_key = encrypt_aes_seed.substr(0, 32);
+    std::string kIV = encrypt_aes_seed.substr(32, 16);
+    serialised_message = crypto::SymmDecrypt(request.substr(513), aes_key, kIV);
+  }
+  int msg_type;
+  std::string payload;
+  std::string message_signature;
+  if (UnwrapWrapperMessage(serialised_message, &msg_type, &payload,
+                       &message_signature)) {
+    ProcessSerialisedMessage(msg_type, payload,
+                             security_type, message_signature,
+                             info, response, timeout);
+  }
+}
 
 std::string MessageHandler::WrapMessage(
     const protobuf::PingRequest &msg,
@@ -437,6 +473,52 @@ void MessageHandler::ProcessSerialisedMessage(
                                                           message_response,
                                                           timeout);
   }
+}
+std::string MessageHandler::MakeSerialisedWrapperMessage(
+    const int &message_type,
+    const std::string &payload,
+    SecurityType security_type,
+    const std::string &recipient_public_key) {
+  DLOG(INFO) << "The real MakeSerialisedWrapperMessage! Eh?";
+  // If we asked for security but provided no securifier, fail.
+  if (security_type && !securifier_) {
+    DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                << " - No securifier provided.";
+    return "";
+  }
+
+  // Handle signing
+  std::string signature;
+  if (security_type & kSign) {
+    signature = securifier_->Sign(
+        boost::lexical_cast<std::string>(message_type) + payload);
+  } else if (security_type & kSignWithParameters) {
+    signature = securifier_->SignWithParameters(
+        boost::lexical_cast<std::string>(message_type) + payload);
+  }
+  std::string serialised_message(WrapWrapperMessage(message_type,
+                                                    payload,
+                                                    signature));
+  // Handle encryption
+  std::string final_message(1, security_type);
+  if (security_type & kAsymmetricEncrypt) {
+    if (recipient_public_key.empty()) {
+      DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
+                  << " - No public key for receiver provided.";
+      return "";
+    }
+    std::string seed = RandomString(48);
+    std::string key = seed.substr(0, 32);
+    std::string kIV = seed.substr(32, 16);
+    std::string encrypt_message =
+        crypto::SymmEncrypt(serialised_message, key, kIV);
+    std::string encrypt_aes_seed =
+        securifier_->AsymmetricEncrypt(seed, recipient_public_key);
+    final_message += encrypt_aes_seed + encrypt_message;
+  } else {
+    final_message += serialised_message;
+  }
+  return final_message;
 }
 
 }  // namespace dht
