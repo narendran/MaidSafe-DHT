@@ -92,6 +92,7 @@ class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRsp_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRqst_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRsp_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDownlist_Test;
+class KademliaMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test;
 class KademliaMessageHandlerTest;
 }  // namespace test
 
@@ -198,7 +199,8 @@ class MessageHandler : public transport::MessageHandler {
            transport::Timeout*)>> DownlistNtfSigPtr;
 
   explicit MessageHandler(std::shared_ptr<Securifier> securifier)
-    : transport::MessageHandler(securifier),
+    : transport::MessageHandler(),
+      securifier_(securifier),
       on_ping_request_(new PingReqSigPtr::element_type),
       on_ping_response_(new PingRspSigPtr::element_type),
       on_find_value_request_(new FindValueReqSigPtr::element_type),
@@ -216,6 +218,10 @@ class MessageHandler : public transport::MessageHandler {
       on_downlist_notification_(new DownlistNtfSigPtr::element_type) {}
   virtual ~MessageHandler() {}
 
+  virtual void OnMessageReceived(const std::string &request,
+                                 const transport::Info &info,
+                                 std::string *response,
+                                 transport::Timeout *timeout);
   std::string WrapMessage(const protobuf::PingRequest &msg,
                           const std::string &recipient_public_key);
   std::string WrapMessage(const protobuf::FindValueRequest &msg,
@@ -271,6 +277,12 @@ class MessageHandler : public transport::MessageHandler {
                                         const transport::Info &info,
                                         std::string *message_response,
                                         transport::Timeout *timeout);
+  virtual std::string MakeSerialisedWrapperMessage(
+      const int &message_type,
+      const std::string &payload,
+      SecurityType security_type,
+      const std::string &recipient_public_key);
+  std::shared_ptr<Securifier> securifier_;
 
  private:
   friend class test::KademliaMessageHandlerTest_BEH_WrapMessagePingResponse_Test;  // NOLINT
@@ -295,8 +307,8 @@ class MessageHandler : public transport::MessageHandler {
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRqst_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRsp_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDownlist_Test;  // NOLINT
+  friend class test::KademliaMessageHandlerTest_BEH_MakeSerialisedWrapperMessage_Test; // NOLINT
   friend class test::KademliaMessageHandlerTest;
-
   MessageHandler(const MessageHandler&);
   MessageHandler& operator=(const MessageHandler&);
 

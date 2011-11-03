@@ -109,7 +109,11 @@ class MockMessageHandler : public MessageHandler {
                          const transport::Info &info,
                          std::string *response,
                          transport::Timeout *timeout) {
-    ProcessSerialisedMessage(request_type_, request, kNone, "",
+    int msg_type;
+    std::string payload, message_signature;
+    UnwrapWrapperMessage(request.substr(1), &msg_type, &payload,
+                       &message_signature);
+    ProcessSerialisedMessage(request_type_, payload, kNone, "",
                              info, response, timeout);
   }
 
@@ -123,7 +127,6 @@ class MockMessageHandler : public MessageHandler {
     transport::Timeout* timeout) {
   message_response->clear();
   *timeout = transport::kImmediateTimeout;
-
   switch (message_type) {
     case kPingRequest: {
       protobuf::PingRequest request;
@@ -266,6 +269,16 @@ class MockMessageHandler : public MessageHandler {
     default:
       break;
   }
+}
+
+std::string MakeSerialisedWrapperMessage(
+    const int &message_type,
+    const std::string &payload,
+    SecurityType /*security_type*/,
+    const std::string &/*recipient_public_key*/) {
+    std::string final_message(1, kNone);
+  final_message += WrapWrapperMessage(message_type, payload, "");
+  return final_message;
 }
   static volatile bool ops_completion_flag;
  protected:
