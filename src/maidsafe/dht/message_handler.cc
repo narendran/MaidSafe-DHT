@@ -49,9 +49,11 @@ void MessageHandler::OnMessageReceived(const std::string &request,
   if (request.empty())
     return;
   SecurityType security_type = request.at(0);
-  if (security_type && !securifier_)
+  if (security_type && !securifier_) {
+    transport::MessageHandler::OnMessageReceived(request, info, response,
+        timeout);
     return;
-
+  }
   std::string serialised_message(request.substr(1));
   if (security_type & kAsymmetricEncrypt) {
     std::string aes_seed = request.substr(1, 512);

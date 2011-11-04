@@ -270,14 +270,14 @@ class MessageHandler : public transport::MessageHandler {
   }
 
  protected:
-  virtual void ProcessSerialisedMessage(const int &message_type,
-                                        const std::string &payload,
-                                        const SecurityType &security_type,
-                                        const std::string &message_signature,
-                                        const transport::Info &info,
-                                        std::string *message_response,
-                                        transport::Timeout *timeout);
-  virtual std::string MakeSerialisedWrapperMessage(
+  void ProcessSerialisedMessage(const int &message_type,
+                                const std::string &payload,
+                                const SecurityType &security_type,
+                                const std::string &message_signature,
+                                const transport::Info &info,
+                                std::string *message_response,
+                                transport::Timeout *timeout);
+  std::string MakeSerialisedWrapperMessage(
       const int &message_type,
       const std::string &payload,
       SecurityType security_type,
