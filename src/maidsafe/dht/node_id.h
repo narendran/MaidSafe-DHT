@@ -34,6 +34,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/serialization/nvp.hpp"
 #include "maidsafe/common/platform_config.h"
 #include "maidsafe/dht/config.h"
+#include "maidsafe/common/utils.h"
 #include "maidsafe/dht/version.h"
 
 #if MAIDSAFE_DHT_VERSION != 3106

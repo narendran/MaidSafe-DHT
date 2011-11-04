@@ -49,9 +49,11 @@ void MessageHandler::OnMessageReceived(const std::string &request,
   if (request.empty())
     return;
   SecurityType security_type = request.at(0);
-  if (security_type && !securifier_) {
+  if (security_type) {
     transport::MessageHandler::OnMessageReceived(request, info, response,
-        timeout);
+                                                 timeout);
+    return;
+  } else if (!securifier_) {
     return;
   }
   std::string serialised_message(request.substr(1));
@@ -476,12 +478,12 @@ void MessageHandler::ProcessSerialisedMessage(
                                                           timeout);
   }
 }
+
 std::string MessageHandler::MakeSerialisedWrapperMessage(
     const int &message_type,
     const std::string &payload,
     SecurityType security_type,
     const std::string &recipient_public_key) {
-  DLOG(INFO) << "The real MakeSerialisedWrapperMessage! Eh?";
   // If we asked for security but provided no securifier, fail.
   if (security_type && !securifier_) {
     DLOG(ERROR) << "MakeSerialisedWrapperMessage - type " << message_type
