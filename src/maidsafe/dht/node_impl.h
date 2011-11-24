@@ -501,7 +501,7 @@ class NodeImpl {
   std::shared_ptr<DataStore> data_store_;
   std::shared_ptr<Service> service_;
   std::shared_ptr<RoutingTable> routing_table_;
-  std::shared_ptr<Rpcs<transport::TcpTransport>> rpcs_;
+  std::shared_ptr<Rpcs<transport::RudpTransport>> rpcs_;
   /** Own info of nodeid, ip and port */
   Contact contact_;
   bool joined_;

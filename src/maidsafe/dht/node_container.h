@@ -41,7 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/securifier.h"
 
-#include "maidsafe/transport/tcp_transport.h"
+#include "maidsafe/transport/rudp_transport.h"
 // TODO(Fraser#5#): 2011-08-30 - remove #include utils.h once NAT detection is
 //                  implemented.
 #include "maidsafe/transport/utils.h"
@@ -62,7 +62,7 @@ namespace bptime = boost::posix_time;
 
 namespace maidsafe {
 
-namespace dht {
+namespace dht {  
 
 template <typename NodeType>
 class NodeContainer {
@@ -399,7 +399,7 @@ void NodeContainer<NodeType>::Init(
   // incoming raw messages.  Don't need to connect to on_error() as service
   // doesn't care if reply succeeds or not.
   if (!client_only_node) {
-    listening_transport_.reset(new transport::TcpTransport(asio_service_));
+    listening_transport_.reset(new transport::RudpTransport(asio_service_));
     listening_transport_->on_message_received()->connect(
         transport::OnMessageReceived::element_type::slot_type(
             &MessageHandler::OnMessageReceived, message_handler_.get(),
@@ -450,6 +450,7 @@ int NodeContainer<NodeType>::Start(
       return result;
     }
   }
+  
 
   boost::mutex mutex;
   boost::condition_variable cond_var;

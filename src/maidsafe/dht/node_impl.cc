@@ -134,7 +134,7 @@ void NodeImpl::Join(const NodeId &node_id,
   }
 
   if (!rpcs_) {
-    rpcs_.reset(new Rpcs<transport::TcpTransport>(asio_service_,
+    rpcs_.reset(new Rpcs<transport::RudpTransport>(asio_service_,
                                                   default_securifier_));
   }
 
