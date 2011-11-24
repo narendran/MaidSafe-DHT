@@ -171,6 +171,8 @@ class MockTransport : public transport::Transport {
   virtual void Send(const std::string &/*data*/,
                     const transport::Endpoint &/*endpoint*/,
                     const transport::Timeout &/*timeout*/) {}
+  virtual transport::TransportCondition Bootstrap(
+      const std::vector<transport::Contact> &candidates) {}
  private:
   boost::asio::io_service io_service_;
 };

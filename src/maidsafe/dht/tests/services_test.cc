@@ -94,6 +94,8 @@ class MockTransportServiceTest : public transport::Transport {
   virtual void Send(const std::string &,
                     const transport::Endpoint &,
                     const transport::Timeout &) {}
+  virtual transport::TransportCondition Bootstrap(
+      const std::vector<transport::Contact> &candidates) {}
 };
 
 class SecurifierValidateFalse: public SecurifierGetPublicKeyAndValidation {

@@ -78,6 +78,8 @@ class RpcsMockTransport : public transport::Transport {
       boost::thread(&RpcsMockTransport::SignalMessageReceived, this, data);
     }
   }
+  virtual transport::TransportCondition Bootstrap(
+      const std::vector<transport::Contact> &candidates) {}
   void SignalError() {
     Sleep(boost::posix_time::milliseconds(500));
     ++repeat_factor_;
