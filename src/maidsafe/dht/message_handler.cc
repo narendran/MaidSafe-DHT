@@ -50,8 +50,9 @@ void MessageHandler::OnMessageReceived(const std::string &request,
     return;
   SecurityType security_type = request.at(0);
   if (security_type) {
-    transport::MessageHandler::OnMessageReceived(request, info, response,
-                                                 timeout);
+    on_message_received_(request, info, response, timeout);
+//     transport::MessageHandler::OnMessageReceived(request, info, response,
+//                                                  timeout);
     return;
   } else if (!securifier_) {
     return;
@@ -469,13 +470,16 @@ void MessageHandler::ProcessSerialisedMessage(
       break;
     }
     default:
-      transport::MessageHandler::ProcessSerialisedMessage(message_type,
-                                                          payload,
-                                                          security_type,
-                                                          message_signature,
-                                                          info,
-                                                          message_response,
-                                                          timeout);
+      process_serialised_message_(message_type, payload, security_type,
+                                  message_signature, info, message_response,
+                                  timeout);
+//       transport::MessageHandler::ProcessSerialisedMessage(message_type,
+//                                                           payload,
+//                                                           security_type,
+//                                                           message_signature,
+//                                                           info,
+//                                                           message_response,
+//                                                           timeout);
   }
 }
 

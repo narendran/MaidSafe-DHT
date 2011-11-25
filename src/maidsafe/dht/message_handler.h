@@ -32,7 +32,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include "boost/concept_check.hpp"
 #include "boost/signals2/signal.hpp"
-#include "maidsafe/transport/message_handler.h"
+#include "maidsafe/transport/rudp_message_handler.h"
 #include "maidsafe/dht/version.h"
 
 #if MAIDSAFE_DHT_VERSION != 3106
@@ -117,7 +117,7 @@ enum MessageType {
   kDownlistNotification
 };
 
-class MessageHandler : public transport::MessageHandler {
+class MessageHandler : public transport::RudpMessageHandler {
  public:
   typedef std::shared_ptr<bs2::signal<  // NOLINT
       void(const transport::Info&,
@@ -199,7 +199,7 @@ class MessageHandler : public transport::MessageHandler {
            transport::Timeout*)>> DownlistNtfSigPtr;
 
   explicit MessageHandler(std::shared_ptr<Securifier> securifier)
-    : transport::MessageHandler(),
+    : transport::RudpMessageHandler(),
       securifier_(securifier),
       on_ping_request_(new PingReqSigPtr::element_type),
       on_ping_response_(new PingRspSigPtr::element_type),

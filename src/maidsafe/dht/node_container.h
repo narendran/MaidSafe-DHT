@@ -42,6 +42,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/securifier.h"
 
 #include "maidsafe/transport/rudp_transport.h"
+#include "maidsafe/transport/nat_detection.h"
+#include "maidsafe/transport/nat_traversal.h"
+
+
 // TODO(Fraser#5#): 2011-08-30 - remove #include utils.h once NAT detection is
 //                  implemented.
 #include "maidsafe/transport/utils.h"
@@ -62,7 +66,7 @@ namespace bptime = boost::posix_time;
 
 namespace maidsafe {
 
-namespace dht {  
+namespace dht {
 
 template <typename NodeType>
 class NodeContainer {
@@ -277,6 +281,8 @@ class NodeContainer {
                     boost::mutex *mutex,
                     boost::condition_variable *cond_var);
   bool ResultReady(int *result) { return *result != kPendingResult; }
+  void RefreshRendezvousConnection(
+      const transport::TransportCondition &condition);
   JoinFunctor join_functor_;
   StoreFunctor store_functor_;
   DeleteFunctor delete_functor_;
@@ -285,6 +291,7 @@ class NodeContainer {
   FindNodesFunctor find_nodes_functor_;
   GetContactFunctor get_contact_functor_;
   PingFunctor ping_functor_;
+  std::shared_ptr<transport::NatTraversal> nat_traversal_;
 };
 
 template <typename NodeType>
@@ -450,7 +457,26 @@ int NodeContainer<NodeType>::Start(
       return result;
     }
   }
-  
+
+  transport::NatType nat_type;
+  transport::Endpoint rendezvous_endpoint;
+  transport::NatDetection nat_detection;
+  std::vector<transport::Contact> contacts;
+  for (auto it(bootstrap_contacts_.begin()); it != bootstrap_contacts_.end();
+       ++it) {
+    contacts.push_back(static_cast<transport::Contact>(*it));
+  }
+  nat_detection.Detect(contacts, true, listening_transport_, message_handler_,
+                       &nat_type, &rendezvous_endpoint);
+
+  if (nat_type == transport::kPortRestricted) {
+    nat_traversal_.reset(new transport::NatTraversal(asio_service_,
+        transport::kDefaultInitialTimeout, transport::kDefaultInitialTimeout,
+        listening_transport_, message_handler_));
+    nat_traversal_->KeepAlive(rendezvous_endpoint,
+        std::bind(&NodeContainer<NodeType>::RefreshRendezvousConnection, this,
+                  arg::_1));
+  }
 
   boost::mutex mutex;
   boost::condition_variable cond_var;
@@ -467,6 +493,12 @@ int NodeContainer<NodeType>::Start(
   result = kPendingResult;
   GetAndResetJoinResult(&result);
   return (wait_success ? result : kTimedOut);
+}
+
+template <typename NodeType>
+void NodeContainer<NodeType>::RefreshRendezvousConnection(
+    const transport::TransportCondition &condition) {
+  // TODO(Mahmoud): To re-establish the connection to a rendezvous
 }
 
 template <typename NodeType>
