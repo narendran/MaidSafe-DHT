@@ -114,9 +114,9 @@ protobuf::Contact ToProtobuf(const Contact &contact) {
     pb_contact.set_tcp80(true);
 
   pb_contact.set_public_key_id(contact.public_key_id());
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(contact.public_key(), &encode_pub_key);
-  pb_contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(contact.public_key());
+  pb_contact.set_public_key(encode_pub_key ? *encode_pub_key : "");
   pb_contact.set_other_info(contact.other_info());
   return pb_contact;
 }

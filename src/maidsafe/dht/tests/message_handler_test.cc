@@ -79,7 +79,7 @@ class KademliaMessageHandlerTest: public testing::Test {
     std::string encrypt_aes_seed = encrypted.substr(1, 512);
     std::string decrypted_message;
     asymm::PrivateKey private_key;
-    asymm::DecodePrivateKey(key, &private_key);
+    asymm::DecodeAndClearPrivateKey(&key, &private_key);
     asymm::Decrypt(encrypt_aes_seed, private_key, &decrypted_message);
     encrypt_aes_seed = decrypted_message;
     std::string aes_key = encrypt_aes_seed.substr(0, 32);
@@ -334,9 +334,9 @@ class KademliaMessageHandlerTest: public testing::Test {
 
     dht::protobuf::Contact contact;
     contact.set_node_id("test");
-    std::string public_key;
-    asymm::EncodePublicKey(default_public_key_, &public_key);
-    contact.set_public_key(public_key);
+    std::shared_ptr<std::string> public_key =
+        asymm::EncodePublicKey(default_public_key_);
+    contact.set_public_key(*public_key);
     p_req.set_ping(RandomString(50 + (RandomUint32() % 50)));
     p_req.mutable_sender()->CopyFrom(contact);
     p_rsp.set_echo(p_req.ping());
@@ -533,22 +533,23 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessagePingRequest) {
 
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(ping_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::PingRequest>(ping_rqst,
-                                                 encode_pub_key,
+                                                 *encode_pub_key,
                                                  kPingRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
 //   EXPECT_EQ(manual_encrypt, function_encrypt);
 
   // decrypt for comparison test
   dht::protobuf::PingRequest decrypted_function_ping =
-      GetWrapper<dht::protobuf::PingRequest>(function_encrypt, encode_priv_key);
+      GetWrapper<dht::protobuf::PingRequest>(function_encrypt,
+                                             *encode_priv_key);
   dht::protobuf::PingRequest decrypted_manual_ping =
-      GetWrapper<dht::protobuf::PingRequest>(manual_encrypt, encode_priv_key);
+      GetWrapper<dht::protobuf::PingRequest>(manual_encrypt, *encode_priv_key);
   ASSERT_EQ(decrypted_manual_ping.ping(), decrypted_function_ping.ping());
   ASSERT_EQ(decrypted_manual_ping.sender().node_id(),
             decrypted_function_ping.sender().node_id());
@@ -569,13 +570,13 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindValueRequest) {
 
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(value_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::FindValueRequest>(value_rqst,
-                                                      encode_pub_key,
+                                                      *encode_pub_key,
                                                       kFindValueRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
 //   EXPECT_EQ(manual_encrypt, function_encrypt);
@@ -583,10 +584,10 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindValueRequest) {
   // decrypt for comparison test
   dht::protobuf::FindValueRequest decrypted_function_value =
       GetWrapper<dht::protobuf::FindValueRequest>(function_encrypt,
-                                                  encode_priv_key);
+                                                  *encode_priv_key);
   dht::protobuf::FindValueRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::FindValueRequest>(manual_encrypt,
-                                                  encode_priv_key);
+                                                  *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.key(), decrypted_function_value.key());
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
@@ -607,13 +608,13 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindNodesRequest) {
 
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(nodes_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::FindNodesRequest>(nodes_rqst,
-                                                      encode_pub_key,
+                                                      *encode_pub_key,
                                                       kFindNodesRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
 //   EXPECT_EQ(manual_encrypt, function_encrypt);
@@ -621,10 +622,10 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindNodesRequest) {
   // decrypt for comparison test
   dht::protobuf::FindNodesRequest decrypted_function_value =
       GetWrapper<dht::protobuf::FindNodesRequest>(function_encrypt,
-                                                  encode_priv_key);
+                                                  *encode_priv_key);
   dht::protobuf::FindNodesRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::FindNodesRequest>(manual_encrypt,
-                                                  encode_priv_key);
+                                                  *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.key(), decrypted_function_value.key());
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
@@ -650,22 +651,22 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageStoreRequest) {
 
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(store_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::StoreRequest>(store_rqst,
-                                                  encode_pub_key,
+                                                  *encode_pub_key,
                                                   kStoreRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
 
   dht::protobuf::StoreRequest decrypted_function_value =
       GetWrapper<dht::protobuf::StoreRequest>(function_encrypt,
-                                              encode_priv_key);
+                                              *encode_priv_key);
   dht::protobuf::StoreRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::StoreRequest>(manual_encrypt,
-                                              encode_priv_key);
+                                              *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.key(), decrypted_function_value.key());
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
@@ -689,20 +690,20 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageStoreRefreshRequest) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(refresh_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::StoreRefreshRequest>(
-          refresh_rqst, encode_pub_key, kStoreRefreshRequest);
+          refresh_rqst, *encode_pub_key, kStoreRefreshRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::StoreRefreshRequest decrypted_function_value =
       GetWrapper<dht::protobuf::StoreRefreshRequest>(function_encrypt,
-                                                     encode_priv_key);
+                                                     *encode_priv_key);
   dht::protobuf::StoreRefreshRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::StoreRefreshRequest>(manual_encrypt,
-                                                     encode_priv_key);
+                                                     *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
 }
@@ -725,22 +726,22 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageDeleteRequest) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt =
       msg_hndlr_->WrapMessage(delete_rqst, kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::DeleteRequest>(delete_rqst,
-                                                   encode_pub_key,
+                                                   *encode_pub_key,
                                                    kDeleteRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
 //   EXPECT_EQ(manual_encrypt, function_encrypt);
   dht::protobuf::DeleteRequest decrypted_function_value =
       GetWrapper<dht::protobuf::DeleteRequest>(function_encrypt,
-                                               encode_priv_key);
+                                               *encode_priv_key);
   dht::protobuf::DeleteRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::DeleteRequest>(manual_encrypt,
-                                               encode_priv_key);
+                                               *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.key(), decrypted_function_value.key());
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
@@ -763,20 +764,20 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageDeleteRefreshRequest) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(delrefresh_rqst,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::DeleteRefreshRequest>(
-          delrefresh_rqst, encode_pub_key, kDeleteRefreshRequest);
+          delrefresh_rqst, *encode_pub_key, kDeleteRefreshRequest);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::DeleteRefreshRequest decrypted_function_value =
       GetWrapper<dht::protobuf::DeleteRefreshRequest>(function_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   dht::protobuf::DeleteRefreshRequest decrypted_manual_value =
       GetWrapper<dht::protobuf::DeleteRefreshRequest>(manual_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
 }
@@ -794,20 +795,20 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageDownlistNotification) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(downlist,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::DownlistNotification>(
-          downlist, encode_pub_key, kDownlistNotification);
+          downlist, *encode_pub_key, kDownlistNotification);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::DownlistNotification decrypted_function_value =
       GetWrapper<dht::protobuf::DownlistNotification>(function_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   dht::protobuf::DownlistNotification decrypted_manual_value =
       GetWrapper<dht::protobuf::DownlistNotification>(manual_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.sender().node_id(),
             decrypted_function_value.sender().node_id());
 }
@@ -823,21 +824,21 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessagePingResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::PingResponse>(response,
-                                                  encode_pub_key,
+                                                  *encode_pub_key,
                                                   kPingResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::PingResponse decrypted_function_value =
       GetWrapper<dht::protobuf::PingResponse>(function_encrypt,
-                                              encode_priv_key);
+                                              *encode_priv_key);
   dht::protobuf::PingResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::PingResponse>(manual_encrypt,
-                                              encode_priv_key);
+                                              *encode_priv_key);
   ASSERT_EQ(decrypted_manual_value.echo(),
             decrypted_function_value.echo());
 }
@@ -853,21 +854,21 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindValueResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::FindValueResponse>(response,
-                                                       encode_pub_key,
+                                                       *encode_pub_key,
                                                        kFindValueResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::FindValueResponse decrypted_function_value =
       GetWrapper<dht::protobuf::FindValueResponse>(function_encrypt,
-                                                   encode_priv_key);
+                                                   *encode_priv_key);
   dht::protobuf::FindValueResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::FindValueResponse>(manual_encrypt,
-                                                   encode_priv_key);
+                                                   *encode_priv_key);
   EXPECT_TRUE(decrypted_manual_value.result());
   EXPECT_TRUE(decrypted_function_value.result());
 }
@@ -883,21 +884,21 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindNodesResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::FindNodesResponse>(response,
-                                                       encode_pub_key,
+                                                       *encode_pub_key,
                                                        kFindNodesResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::FindNodesResponse decrypted_function_value =
       GetWrapper<dht::protobuf::FindNodesResponse>(function_encrypt,
-                                                   encode_priv_key);
+                                                   *encode_priv_key);
   dht::protobuf::FindNodesResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::FindNodesResponse>(manual_encrypt,
-                                                   encode_priv_key);
+                                                   *encode_priv_key);
   ASSERT_TRUE(decrypted_manual_value.result());
   ASSERT_TRUE(decrypted_function_value.result());
 }
@@ -913,21 +914,21 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageStoreResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::StoreResponse>(response,
-                                                   encode_pub_key,
+                                                   *encode_pub_key,
                                                    kStoreResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::StoreResponse decrypted_function_value =
       GetWrapper<dht::protobuf::StoreResponse>(function_encrypt,
-                                               encode_priv_key);
+                                               *encode_priv_key);
   dht::protobuf::StoreResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::StoreResponse>(manual_encrypt,
-                                               encode_priv_key);
+                                               *encode_priv_key);
   ASSERT_TRUE(decrypted_manual_value.result());
   ASSERT_TRUE(decrypted_function_value.result());
 }
@@ -943,20 +944,20 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageStoreRefreshResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::StoreRefreshResponse>(
-          response,  encode_pub_key, kStoreRefreshResponse);
+          response,  *encode_pub_key, kStoreRefreshResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::StoreRefreshResponse decrypted_function_value =
       GetWrapper<dht::protobuf::StoreRefreshResponse>(function_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   dht::protobuf::StoreRefreshResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::StoreRefreshResponse>(manual_encrypt,
-                                                      encode_priv_key);
+                                                      *encode_priv_key);
   ASSERT_TRUE(decrypted_manual_value.result());
   ASSERT_TRUE(decrypted_function_value.result());
 }
@@ -972,21 +973,21 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageDeleteResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::DeleteResponse>(response,
-                                                    encode_pub_key,
+                                                    *encode_pub_key,
                                                     kDeleteResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::DeleteResponse decrypted_function_value =
       GetWrapper<dht::protobuf::DeleteResponse>(function_encrypt,
-                                                encode_priv_key);
+                                                *encode_priv_key);
   dht::protobuf::DeleteResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::DeleteResponse>(manual_encrypt,
-                                                encode_priv_key);
+                                                *encode_priv_key);
   ASSERT_TRUE(decrypted_manual_value.result());
   ASSERT_TRUE(decrypted_function_value.result());
 }
@@ -1002,20 +1003,20 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageDeleteRefreshResponse) {
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
                                                         kp.public_key);
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
-  std::string encode_priv_key;
-  asymm::EncodePrivateKey(kp.private_key, &encode_priv_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(kp.public_key);
+  std::shared_ptr<std::string> encode_priv_key =
+      asymm::EncodePrivateKey(kp.private_key);
   std::string manual_encrypt =
       EncryptMessage<dht::protobuf::DeleteRefreshResponse>(
-          response, encode_pub_key, kDeleteRefreshResponse);
+          response, *encode_pub_key, kDeleteRefreshResponse);
   EXPECT_NE(manual_encrypt, function_encrypt);
   dht::protobuf::DeleteRefreshResponse decrypted_function_value =
       GetWrapper<dht::protobuf::DeleteRefreshResponse>(function_encrypt,
-                                                       encode_priv_key);
+                                                       *encode_priv_key);
   dht::protobuf::DeleteRefreshResponse decrypted_manual_value =
       GetWrapper<dht::protobuf::DeleteRefreshResponse>(manual_encrypt,
-                                                       encode_priv_key);
+                                                       *encode_priv_key);
   ASSERT_TRUE(decrypted_manual_value.result());
   ASSERT_TRUE(decrypted_function_value.result());
 }
@@ -1026,9 +1027,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessagePingRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(rsa_keypair_.public_key, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(rsa_keypair_.public_key);
+  contact.set_public_key(*encode_pub_key);
   std::string message_signature;
   std::string *message_response = new std::string;
   transport::Timeout *timeout = new transport::Timeout;
@@ -1101,9 +1102,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFValRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(rsa_keypair_.public_key, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(rsa_keypair_.public_key);
+  contact.set_public_key(*encode_pub_key);
   std::string message_signature;
   std::string *message_response = new std::string;
   transport::Timeout *timeout = new transport::Timeout;
@@ -1169,9 +1170,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFNodeRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(rsa_keypair_.public_key, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(rsa_keypair_.public_key);
+  contact.set_public_key(*encode_pub_key);
   std::string message_signature;
   std::string *message_response = new std::string;
   transport::Timeout *timeout = new transport::Timeout;
@@ -1237,9 +1238,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageStoreRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(default_public_key_, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(default_public_key_);
+  contact.set_public_key(*encode_pub_key);
   std::string message_response;
   transport::Timeout timeout;
 
@@ -1333,9 +1334,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageStoreRefRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(default_public_key_, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(default_public_key_);
+  contact.set_public_key(*encode_pub_key);
   std::string message_response;
   transport::Timeout timeout;
 
@@ -1423,9 +1424,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageDeleteRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(default_public_key_, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(default_public_key_);
+  contact.set_public_key(*encode_pub_key);
   std::string message_response;
   transport::Timeout timeout;
 
@@ -1516,9 +1517,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageDeleteRefRqst) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(default_public_key_, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(default_public_key_);
+  contact.set_public_key(*encode_pub_key);
   std::string message_response;
   transport::Timeout timeout;
 
@@ -1607,9 +1608,9 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageDownlist) {
   transport::Info info;
   dht::protobuf::Contact contact;
   contact.set_node_id("test");
-  std::string encode_pub_key;
-  asymm::EncodePublicKey(rsa_keypair_.public_key, &encode_pub_key);
-  contact.set_public_key(encode_pub_key);
+  std::shared_ptr<std::string> encode_pub_key =
+      asymm::EncodePublicKey(default_public_key_);
+  contact.set_public_key(*encode_pub_key);
   std::string message_signature;
   std::string *message_response = new std::string;
   transport::Timeout *timeout = new transport::Timeout;
