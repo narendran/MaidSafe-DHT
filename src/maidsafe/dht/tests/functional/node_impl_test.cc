@@ -119,23 +119,6 @@ class NodeImplTest : public testing::TestWithParam<bool> {
     return PrivateKeyPtr(new asymm::PrivateKey(key_pair->private_key));
   }
 
-  std::shared_ptr<DataStore> GetDataStore(
-      std::shared_ptr<maidsafe::dht::NodeContainer<NodeImpl>>
-          node_container) {
-    return node_container->node()->data_store_;
-  }
-
-  bool IsKeyValueInDataStore(std::shared_ptr<DataStore> data_store,
-                             std::string key, std::string value) {
-    std::vector<ValueAndSignature> values_and_signatures;
-    data_store->GetValues(key, &values_and_signatures);
-    for (size_t i = 0; i < values_and_signatures.size(); ++i) {
-      if (values_and_signatures[i].first == value)
-        return true;
-    }
-    return false;
-  }
-
   std::shared_ptr<LocalNetwork<NodeImpl> > env_;
   const bptime::time_duration kTimeout_;
   bool client_only_node_;

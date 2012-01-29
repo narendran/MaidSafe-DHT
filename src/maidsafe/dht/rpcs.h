@@ -62,14 +62,9 @@ namespace maidsafe {
 
 namespace dht {
 
-typedef std::function<void(RankInfoPtr, const int&)> RpcPingFunctor,
-                                                     RpcStoreFunctor,
-                                                     RpcStoreRefreshFunctor,
-                                                     RpcDeleteFunctor,
-                                                     RpcDeleteRefreshFunctor;
+typedef std::function<void(RankInfoPtr, const int&)> RpcPingFunctor;
 typedef std::function<void(RankInfoPtr,
                            const int&,
-                           const std::vector<ValueAndSignature>&,
                            const std::vector<Contact>&,
                            const Contact&)> RpcFindValueFunctor;
 typedef std::function<void(RankInfoPtr,
@@ -106,34 +101,6 @@ class Rpcs {
                          PrivateKeyPtr private_key,
                          const Contact &peer,
                          RpcFindNodesFunctor callback);
-  virtual void Store(const Key &key,
-                     const std::string &value,
-                     const std::string &signature,
-                     const boost::posix_time::seconds &ttl,
-                     PrivateKeyPtr private_key,
-                     const Contact &peer,
-                     RpcStoreFunctor callback);
-  virtual void StoreRefresh(
-      const std::string &serialised_store_request,
-      const std::string &serialised_store_request_signature,
-      PrivateKeyPtr private_key,
-      const Contact &peer,
-      RpcStoreRefreshFunctor callback);
-  virtual void Delete(const Key &key,
-                      const std::string &value,
-                      const std::string &signature,
-                      PrivateKeyPtr private_key,
-                      const Contact &peer,
-                      RpcDeleteFunctor callback);
-  virtual void DeleteRefresh(
-      const std::string &serialised_delete_request,
-      const std::string &serialised_delete_request_signature,
-      PrivateKeyPtr private_key,
-      const Contact &peer,
-      RpcDeleteRefreshFunctor callback);
-  virtual void Downlist(const std::vector<NodeId> &node_ids,
-                        PrivateKeyPtr private_key,
-                        const Contact &peer);
   void set_contact(const Contact &contact) { contact_ = contact; }
 
   virtual void Prepare(PrivateKeyPtr private_key,
@@ -187,39 +154,6 @@ class Rpcs {
       const std::string &message,
       std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer);
 
-  void StoreCallback(const transport::TransportCondition &transport_condition,
-                     const transport::Info &info,
-                     const protobuf::StoreResponse &response,
-                     const uint32_t &index,
-                     RpcStoreFunctor callback,
-                     const std::string &message,
-                     std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer);
-
-  void StoreRefreshCallback(
-      const transport::TransportCondition &transport_condition,
-      const transport::Info &info,
-      const protobuf::StoreRefreshResponse &response,
-      const uint32_t &index,
-      RpcStoreRefreshFunctor callback,
-      const std::string &message,
-      std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer);
-
-  void DeleteCallback(const transport::TransportCondition &transport_condition,
-                      const transport::Info &info,
-                      const protobuf::DeleteResponse &response,
-                      const uint32_t &index,
-                      RpcDeleteFunctor callback,
-                      const std::string &message,
-                      std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer);
-
-  void DeleteRefreshCallback(
-      const transport::TransportCondition &transport_condition,
-      const transport::Info &info,
-      const protobuf::DeleteRefreshResponse &response,
-      const uint32_t &index,
-      RpcDeleteRefreshFunctor callback,
-      const std::string &message,
-      std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer);
 
   Contact contact_;
   PrivateKeyPtr default_private_key_;
@@ -330,181 +264,6 @@ void Rpcs<TransportType>::FindNodes(const Key &key,
 }
 
 template <typename TransportType>
-void Rpcs<TransportType>::Store(const Key &key,
-                                const std::string &value,
-                                const std::string &signature,
-                                const boost::posix_time::seconds &ttl,
-                                PrivateKeyPtr private_key,
-                                const Contact &peer,
-                                RpcStoreFunctor callback) {
-  TransportPtr transport;
-  MessageHandlerPtr message_handler;
-  Prepare(private_key, transport, message_handler);
-  uint32_t object_indx =
-      connected_objects_.AddObject(transport, message_handler);
-
-  protobuf::StoreRequest request;
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_key(key.String());
-  std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer(new RpcsFailurePeer);
-  rpcs_failure_peer->peer = peer;
-
-  protobuf::SignedValue *signed_value(request.mutable_signed_value());
-  signed_value->set_value(value);
-  signed_value->set_signature(signature);
-  request.set_ttl(ttl.is_pos_infinity() ? -1 : ttl.total_seconds());
-  std::string message =
-      message_handler->WrapMessage(request, peer.public_key());
-  // Connect callback to message handler for incoming parsed response or error
-  message_handler->on_store_response()->connect(std::bind(
-      &Rpcs::StoreCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
-  message_handler->on_error()->connect(std::bind(
-      &Rpcs::StoreCallback, this, arg::_1, transport::Info(),
-      protobuf::StoreResponse(), object_indx, callback, message,
-      rpcs_failure_peer));
-  DLOG(INFO) << "\t" << DebugId(contact_) << " STORE to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::StoreRefresh(
-    const std::string &serialised_store_request,
-    const std::string &serialised_store_request_signature,
-    PrivateKeyPtr private_key,
-    const Contact &peer,
-    RpcStoreRefreshFunctor callback) {
-  TransportPtr transport;
-  MessageHandlerPtr message_handler;
-  Prepare(private_key, transport, message_handler);
-  uint32_t object_indx =
-      connected_objects_.AddObject(transport, message_handler);
-
-  protobuf::StoreRefreshRequest request;
-  std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer(new RpcsFailurePeer);
-  rpcs_failure_peer->peer = peer;
-
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_serialised_store_request(serialised_store_request);
-  request.set_serialised_store_request_signature(
-      serialised_store_request_signature);
-  std::string message =
-      message_handler->WrapMessage(request, peer.public_key());
-  // Connect callback to message handler for incoming parsed response or error
-  message_handler->on_store_refresh_response()->connect(std::bind(
-      &Rpcs::StoreRefreshCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
-  message_handler->on_error()->connect(std::bind(
-      &Rpcs::StoreRefreshCallback, this, arg::_1, transport::Info(),
-      protobuf::StoreRefreshResponse(), object_indx, callback, message,
-      rpcs_failure_peer));
-  DLOG(INFO) << "\t" << DebugId(contact_) << " STORE_REFRESH to "
-             << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::Delete(const Key &key,
-                                 const std::string &value,
-                                 const std::string &signature,
-                                 PrivateKeyPtr private_key,
-                                 const Contact &peer,
-                                 RpcDeleteFunctor callback) {
-  TransportPtr transport;
-  MessageHandlerPtr message_handler;
-  Prepare(private_key, transport, message_handler);
-  uint32_t object_indx =
-      connected_objects_.AddObject(transport, message_handler);
-
-  protobuf::DeleteRequest request;
-  std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer(new RpcsFailurePeer);
-  rpcs_failure_peer->peer = peer;
-
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_key(key.String());
-  protobuf::SignedValue *signed_value(request.mutable_signed_value());
-  signed_value->set_value(value);
-  signed_value->set_signature(signature);
-  std::string message =
-      message_handler->WrapMessage(request, peer.public_key());
-  // Connect callback to message handler for incoming parsed response or error
-  message_handler->on_delete_response()->connect(std::bind(
-      &Rpcs::DeleteCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
-  message_handler->on_error()->connect(std::bind(
-      &Rpcs::DeleteCallback, this, arg::_1, transport::Info(),
-      protobuf::DeleteResponse(), object_indx, callback, message,
-      rpcs_failure_peer));
-  DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::DeleteRefresh(
-    const std::string &serialised_delete_request,
-    const std::string &serialised_delete_request_signature,
-    PrivateKeyPtr private_key,
-    const Contact &peer,
-    RpcDeleteRefreshFunctor callback) {
-  TransportPtr transport;
-  MessageHandlerPtr message_handler;
-  Prepare(private_key, transport, message_handler);
-  uint32_t object_indx =
-      connected_objects_.AddObject(transport, message_handler);
-
-  protobuf::DeleteRefreshRequest request;
-  std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer(new RpcsFailurePeer);
-  rpcs_failure_peer->peer = peer;
-
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_serialised_delete_request(serialised_delete_request);
-  request.set_serialised_delete_request_signature(
-      serialised_delete_request_signature);
-  std::string message =
-      message_handler->WrapMessage(request, peer.public_key());
-  // Connect callback to message handler for incoming parsed response or error
-  message_handler->on_delete_refresh_response()->connect(std::bind(
-      &Rpcs::DeleteRefreshCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
-  message_handler->on_error()->connect(std::bind(
-      &Rpcs::DeleteRefreshCallback, this, arg::_1, transport::Info(),
-      protobuf::DeleteRefreshResponse(), object_indx, callback, message,
-      rpcs_failure_peer));
-  DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE_REFRESH to "
-             << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::Downlist(const std::vector<NodeId> &node_ids,
-                                   PrivateKeyPtr private_key,
-                                   const Contact &peer) {
-  TransportPtr transport;
-  MessageHandlerPtr message_handler;
-  Prepare(private_key, transport, message_handler);
-  connected_objects_.AddObject(transport, message_handler);
-  protobuf::DownlistNotification notification;
-  *notification.mutable_sender() = ToProtobuf(contact_);
-  for (size_t i = 0; i < node_ids.size(); ++i)
-    notification.add_node_ids(node_ids[i].String());
-  std::string message = message_handler->WrapMessage(notification,
-                                                     peer.public_key());
-  std::string downlist_ids;
-  for (size_t i = 0; i < node_ids.size(); ++i)
-    downlist_ids += " [" + DebugId(node_ids[i]) + "]";
-
-  DLOG(INFO) << "\t" << DebugId(contact_) << " DOWNLIST " << downlist_ids
-            << " to " << DebugId(peer);
-  transport->Send(message,
-                  peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
-}
-
-template <typename TransportType>
 void Rpcs<TransportType>::PingCallback(
     const std::string &random_data,
     const transport::TransportCondition &transport_condition,
@@ -555,19 +314,17 @@ void Rpcs<TransportType>::FindValueCallback(
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
-
-    std::vector<ValueAndSignature> values_and_signatures;
     std::vector<Contact> contacts;
     Contact alternative_value_holder;
 
     if (transport_condition != transport::kSuccess) {
       callback(RankInfoPtr(new transport::Info(info)), transport_condition,
-               values_and_signatures, contacts, alternative_value_holder);
+               contacts, alternative_value_holder);
       return;
     }
     if (!response.IsInitialized() || !response.result()) {
       callback(RankInfoPtr(new transport::Info(info)), transport::kError,
-               values_and_signatures, contacts, alternative_value_holder);
+               contacts, alternative_value_holder);
       return;
     }
 
@@ -575,24 +332,11 @@ void Rpcs<TransportType>::FindValueCallback(
       alternative_value_holder =
           FromProtobuf(response.alternative_value_holder());
       callback(RankInfoPtr(new transport::Info(info)),
-               kFoundAlternativeStoreHolder, values_and_signatures, contacts,
+               kFoundAlternativeStoreHolder, contacts,
                alternative_value_holder);
       return;
     }
 
-    if (response.signed_values_size() != 0) {
-      for (int i = 0; i < response.signed_values_size(); ++i) {
-        values_and_signatures.push_back(
-            std::make_pair(response.signed_values(i).value(),
-                           response.signed_values(i).signature()));
-      }
-      DLOG(INFO) << "\t" << DebugId(contact_) << " FIND_VALUE response from "
-                 << DebugId(rpcs_failure_peer->peer) << " found "
-                 << values_and_signatures.size() << " values.";
-      callback(RankInfoPtr(new transport::Info(info)), kSuccess,
-               values_and_signatures, contacts, alternative_value_holder);
-      return;
-    }
 
     if (response.closest_nodes_size() != 0) {
       for (int i = 0; i < response.closest_nodes_size(); ++i)
@@ -601,11 +345,11 @@ void Rpcs<TransportType>::FindValueCallback(
                  << DebugId(rpcs_failure_peer->peer) << " found "
                  << contacts.size() << " contacts.";
       callback(RankInfoPtr(new transport::Info(info)), kFailedToFindValue,
-               values_and_signatures, contacts, alternative_value_holder);
+               contacts, alternative_value_holder);
       return;
     }
     callback(RankInfoPtr(new transport::Info(info)), kIterativeLookupFailed,
-             values_and_signatures, contacts, alternative_value_holder);
+             contacts, alternative_value_holder);
   }
 }
 
@@ -651,121 +395,6 @@ void Rpcs<TransportType>::FindNodesCallback(
   }
 }
 
-template <typename TransportType>
-void Rpcs<TransportType>::StoreCallback(
-    const transport::TransportCondition &transport_condition,
-    const transport::Info &info,
-    const protobuf::StoreResponse &response,
-    const uint32_t &index,
-    RpcStoreFunctor callback,
-    const std::string &message,
-    std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer) {
-  if ((transport_condition != transport::kSuccess) &&
-      (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
-    ++(rpcs_failure_peer->rpcs_failure);
-    TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
-        transport::kDefaultInitialTimeout);
-  } else {
-    connected_objects_.RemoveObject(index);
-    if (transport_condition != transport::kSuccess) {
-      callback(RankInfoPtr(new transport::Info(info)), transport_condition);
-      return;
-    }
-    if (response.IsInitialized() && response.result())
-      callback(RankInfoPtr(new transport::Info(info)), transport::kSuccess);
-    else
-      callback(RankInfoPtr(new transport::Info(info)), transport::kError);
-  }
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::StoreRefreshCallback(
-    const transport::TransportCondition &transport_condition,
-    const transport::Info &info,
-    const protobuf::StoreRefreshResponse &response,
-    const uint32_t &index,
-    RpcStoreRefreshFunctor callback,
-    const std::string &message,
-    std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer) {
-  if ((transport_condition != transport::kSuccess) &&
-      (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
-    ++(rpcs_failure_peer->rpcs_failure);
-    TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
-        transport::kDefaultInitialTimeout);
-  } else {
-    connected_objects_.RemoveObject(index);
-    if (transport_condition != transport::kSuccess) {
-      callback(RankInfoPtr(new transport::Info(info)), transport_condition);
-      return;
-    }
-    if (response.IsInitialized() && response.result())
-      callback(RankInfoPtr(new transport::Info(info)), transport::kSuccess);
-    else
-      callback(RankInfoPtr(new transport::Info(info)), transport::kError);
-  }
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::DeleteCallback(
-    const transport::TransportCondition &transport_condition,
-    const transport::Info &info,
-    const protobuf::DeleteResponse &response,
-    const uint32_t &index,
-    RpcDeleteFunctor callback,
-    const std::string &message,
-    std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer) {
-  if ((transport_condition != transport::kSuccess) &&
-      (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
-    ++(rpcs_failure_peer->rpcs_failure);
-    TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
-        transport::kDefaultInitialTimeout);
-  } else {
-    connected_objects_.RemoveObject(index);
-    if (transport_condition != transport::kSuccess) {
-      callback(RankInfoPtr(new transport::Info(info)), transport_condition);
-      return;
-    }
-    if (response.IsInitialized() && response.result())
-      callback(RankInfoPtr(new transport::Info(info)), transport::kSuccess);
-    else
-      callback(RankInfoPtr(new transport::Info(info)), transport::kError);
-  }
-}
-
-template <typename TransportType>
-void Rpcs<TransportType>::DeleteRefreshCallback(
-    const transport::TransportCondition &transport_condition,
-    const transport::Info &info,
-    const protobuf::DeleteRefreshResponse &response,
-    const uint32_t &index,
-    RpcDeleteRefreshFunctor callback,
-    const std::string &message,
-    std::shared_ptr<RpcsFailurePeer> rpcs_failure_peer) {
-  if ((transport_condition != transport::kSuccess) &&
-      (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
-    ++(rpcs_failure_peer->rpcs_failure);
-    TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
-        transport::kDefaultInitialTimeout);
-  } else {
-    connected_objects_.RemoveObject(index);
-    if (transport_condition != transport::kSuccess) {
-      callback(RankInfoPtr(new transport::Info(info)), transport_condition);
-      return;
-    }
-    if (response.IsInitialized() && response.result())
-      callback(RankInfoPtr(new transport::Info(info)), transport::kSuccess);
-    else
-      callback(RankInfoPtr(new transport::Info(info)), transport::kError);
-  }
-}
 
 template <typename TransportType>
 void Rpcs<TransportType>::Prepare(PrivateKeyPtr private_key,
@@ -783,55 +412,6 @@ void Rpcs<TransportType>::Prepare(PrivateKeyPtr private_key,
       transport::OnError::element_type::slot_type(
           &MessageHandler::OnError, message_handler.get(),
           _1, _2).track_foreign(message_handler));
-}
-
-template <typename T>
-std::pair<std::string, std::string> Rpcs<T>::MakeStoreRequestAndSignature(
-    const Key &key,
-    const std::string &value,
-    const std::string &signature,
-    const boost::posix_time::seconds &ttl,
-    PrivateKeyPtr private_key) {
-  MessageHandlerPtr message_handler(new MessageHandler(private_key));
-
-  protobuf::StoreRequest request;
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_key(key.String());
-
-  protobuf::SignedValue *signed_value(request.mutable_signed_value());
-  signed_value->set_value(value);
-  signed_value->set_signature(signature);
-  request.set_ttl(ttl.is_pos_infinity() ? -1 : ttl.total_seconds());
-  std::string message(request.SerializeAsString());
-  std::string message_signature;
-  asymm::Sign(boost::lexical_cast<std::string>(kStoreRequest) + message,
-             *private_key,
-             &message_signature);
-  return std::make_pair(message, message_signature);
-}
-
-template <typename T>
-std::pair<std::string, std::string> Rpcs<T>::MakeDeleteRequestAndSignature(
-    const Key &key,
-    const std::string &value,
-    const std::string &signature,
-    PrivateKeyPtr private_key) {
-  MessageHandlerPtr message_handler(new MessageHandler(private_key));
-
-  protobuf::DeleteRequest request;
-  *request.mutable_sender() = ToProtobuf(contact_);
-  request.set_key(key.String());
-
-  protobuf::SignedValue *signed_value(request.mutable_signed_value());
-  signed_value->set_value(value);
-  signed_value->set_signature(signature);
-
-  std::string message(request.SerializeAsString());
-  std::string message_signature;
-  asymm::Sign(boost::lexical_cast<std::string>(kStoreRequest) + message,
-             *private_key,
-             &message_signature);
-  return std::make_pair(message, message_signature);
 }
 
 }  // namespace dht

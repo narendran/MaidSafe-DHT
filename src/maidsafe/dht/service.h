@@ -35,8 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/dht/config.h"
 #include "maidsafe/dht/contact.h"
-#include "maidsafe/dht/data_store.h"
-#include "maidsafe/dht/sender_task.h"
+
 
 namespace maidsafe {
 
@@ -80,12 +79,10 @@ class Service : public std::enable_shared_from_this<Service> {
   /** Constructor.  To create a Service, in all cases the routing_table and
    * data_store must be provided.
    *  @param routing_table The routing table contains all contacts.
-   *  @param data_store The data_store table contains <value,sig,key> tuples.
    *  @param alternative_store Alternative store.
    *  @param private_key Key for validation.
    *  @param[in] k Kademlia constant k.*/
   Service(std::shared_ptr<RoutingTable> routing_table,
-          std::shared_ptr<DataStore> data_store,
           AlternativeStorePtr alternative_store,
           PrivateKeyPtr private_key,
           const uint16_t &k);
@@ -131,51 +128,7 @@ class Service : public std::enable_shared_from_this<Service> {
    *  @param[in] message The message to store.
    *  @param[in] message_signature The signature of the message to store.
    *  @param[out] response The response. */
-  void Store(const transport::Info &info,
-             const protobuf::StoreRequest &request,
-             const std::string &message,
-             const std::string &message_signature,
-             protobuf::StoreResponse *response,
-             transport::Timeout *timeout);
-  /** Handle StoreRefresh request.
-   *  The request sender will be added into the routing table
-   *  @param[in] info The rank info.
-   *  @param[in] request The request.
-   *  @param[out] response The response. */
-  void StoreRefresh(const transport::Info &info,
-                    const protobuf::StoreRefreshRequest &request,
-                    protobuf::StoreRefreshResponse *response,
-                    transport::Timeout *timeout);
-  /** Handle Delete request.
-   *  The request sender will be added into the routing table.
-   *  @param[in] info The rank info.
-   *  @param[in] request The request.
-   *  @param[in] message The message to delete.
-   *  @param[in] message_signature The signature of the message to delete.
-   *  @param[out] response The response. */
-  void Delete(const transport::Info &info,
-              const protobuf::DeleteRequest &request,
-              const std::string &message,
-              const std::string &message_signature,
-              protobuf::DeleteResponse *response,
-              transport::Timeout *timeout);
-  /** Handle DeleteRefresh request.
-   *  The request sender will be added into the routing table.
-   *  @param[in] info The rank info.
-   *  @param[in] request The request.
-   *  @param[out] response The response. */
-  void DeleteRefresh(const transport::Info &info,
-                     const protobuf::DeleteRefreshRequest &request,
-                     protobuf::DeleteRefreshResponse *response,
-                     transport::Timeout *timeout);
-  /** Handle Downlist request.
-   *  Try to ping the contacts in the downlist and then remove those no-response
-   *  contacts from the routing table
-   *  @param info The rank info.
-   *  @param request The request. */
-  void Downlist(const transport::Info &info,
-                const protobuf::DownlistNotification &request,
-                transport::Timeout *timeout);
+
   /** Set the status to be joined or not joined
    *  @param joined The bool switch. */
   void set_node_joined(bool joined) { node_joined_ = joined; }
@@ -219,100 +172,12 @@ class Service : public std::enable_shared_from_this<Service> {
                        const Key *key = NULL,
                        const std::string *message = NULL,
                        const std::string *message_signature = NULL) const;
-  /** Store Callback.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation */
-  void StoreCallback(KeyValueSignature key_value_signature,
-                     protobuf::StoreRequest request,
-                     transport::Info info,
-                     RequestAndSignature request_signature,
-                     asymm::PublicKey public_key,
-                     asymm::ValidationToken public_key_validation);
-  /** Store Refresh Callback.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation */
-  void StoreRefreshCallback(KeyValueSignature key_value_signature,
-                            protobuf::StoreRefreshRequest request,
-                            transport::Info info,
-                            RequestAndSignature request_signature,
-                            asymm::PublicKey public_key,
-                            asymm::ValidationToken public_key_validation);
-  /** Validate the request and then store the tuple.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation
-   *  @param[in] is_refresh Indicating a publish or a refresh
-   *  @return Indicating validation succeed or not. The success of store will be
-   *          reflected in response.result() */
-  bool ValidateAndStore(const KeyValueSignature &key_value_signature,
-                        const protobuf::StoreRequest &request,
-                        const transport::Info &info,
-                        const RequestAndSignature &request_signature,
-                        const asymm::PublicKey &public_key,
-                        const asymm::ValidationToken &public_key_validation,
-                        const bool is_refresh);
-  /** Delete Callback.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation */
-  void DeleteCallback(KeyValueSignature key_value_signature,
-                      protobuf::DeleteRequest request,
-                      transport::Info info,
-                      RequestAndSignature request_signature,
-                      asymm::PublicKey public_key,
-                      asymm::ValidationToken public_key_validation);
-  /** Delete Refresh Callback.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation */
-  void DeleteRefreshCallback(KeyValueSignature key_value_signature,
-                             protobuf::DeleteRefreshRequest request,
-                             transport::Info info,
-                             RequestAndSignature request_signature,
-                             asymm::PublicKey public_key,
-                             asymm::ValidationToken public_key_validation);
-  /** Validate the request and then delete the tuple.
-   *  @param[in] key_value_signature tuple of <key, value, signature>.
-   *  @param[in] request The request.
-   *  @param[in] info The rank info.
-   *  @param[in] request_signature The request signature.
-   *  @param[in] public_key public key
-   *  @param[in] public_key_validation public key validation
-   *  @param[in] is_refresh Indicating a publish or a refresh
-   *  @return Indicating validation succeed or not. The success of delete will
-   *          be reflected in response.result() */
-  bool ValidateAndDelete(const KeyValueSignature &key_value_signature,
-                         const protobuf::DeleteRequest &request,
-                         const transport::Info &info,
-                         const RequestAndSignature &request_signature,
-                         const asymm::PublicKey &public_key,
-                         const asymm::ValidationToken &public_key_validation,
-                         const bool is_refresh);
 
   void AddContactToRoutingTable(const Contact &contact,
                                 const transport::Info &info);
 
   /** routing table */
   std::shared_ptr<RoutingTable> routing_table_;
-  /** data store */
-  std::shared_ptr<DataStore> datastore_;
   /** alternative store */
   AlternativeStorePtr alternative_store_;
   /** Private Key */
@@ -323,8 +188,6 @@ class Service : public std::enable_shared_from_this<Service> {
   Contact node_contact_;
     /** k closest to the target */
   const uint16_t k_;
-  /** sender task */
-  std::shared_ptr<SenderTask> sender_task_;
   /** client node id that gets ignored by RT **/
   std::string client_node_id_;
   asymm::GetPublicKeyAndValidationFunctor contact_validation_getter_;

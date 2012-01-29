@@ -42,7 +42,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # pragma warning(pop)
 #endif
 #include "maidsafe/dht/routing_table.h"
-#include "maidsafe/dht/data_store.h"
 
 namespace maidsafe {
 
@@ -99,31 +98,6 @@ class CreateContactAndNodeId {
   std::shared_ptr<RoutingTable> routing_table_;
 };
 
-KeyValueSignature MakeKVS(const asymm::Keys &rsa_key_pair,
-                          const size_t &value_size,
-                          std::string key,
-                          std::string value);
-
-KeyValueTuple MakeKVT(const asymm::Keys &rsa_key_pair,
-                      const size_t &value_size,
-                      const bptime::time_duration &ttl,
-                      std::string key,
-                      std::string value);
-
-protobuf::StoreRequest MakeStoreRequest(
-    const Contact &sender,
-    const KeyValueSignature &key_value_signature);
-
-protobuf::DeleteRequest MakeDeleteRequest(
-    const Contact &sender,
-    const KeyValueSignature &key_value_signature);
-/*
-void JoinNetworkLookup(PrivateKeyPtr private_key);
-
-bool AddTestValidation(PrivateKeyPtr private_key,
-                       std::string public_key_id,
-                       std::string public_key);
-                       */
 void AddContact(std::shared_ptr<RoutingTable> routing_table,
                 const Contact &contact,
                 const RankInfoPtr rank_info);
@@ -140,7 +114,6 @@ void JoinNetworkLookup(KeyPairPtr key_pair);
 bool AddTestValidation(KeyPairPtr key_pair,
                        std::string public_key_id,
                        asymm::PublicKey public_key);
-
 
 void DummyContactValidationGetter(
     asymm::Identity identity,

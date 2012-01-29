@@ -156,8 +156,7 @@ struct StoreArgs : public LookupArgs {
             const std::string &value,
             const std::string &signature,
             const bptime::time_duration &time_to_live,
-            PrivateKeyPtr private_key,
-            StoreFunctor callback_in)
+            PrivateKeyPtr private_key)
       : LookupArgs(kStore, target, close_contacts, num_contacts_requested,
                    private_key),
         kSuccessThreshold(success_threshold),
@@ -165,13 +164,11 @@ struct StoreArgs : public LookupArgs {
         successes(0),
         kValue(value),
         kSignature(signature),
-        kSecondsToLive(time_to_live.total_seconds()),
-        callback(callback_in) {}
+        kSecondsToLive(time_to_live.total_seconds()) {}
   const int kSuccessThreshold;
   int second_phase_rpcs_in_flight, successes;
   const std::string kValue, kSignature;
   const bptime::seconds kSecondsToLive;
-  StoreFunctor callback;
 };
 
 struct DeleteArgs : public LookupArgs {
@@ -181,20 +178,17 @@ struct DeleteArgs : public LookupArgs {
              const int &success_threshold,
              const std::string &value,
              const std::string &signature,
-             PrivateKeyPtr private_key,
-             DeleteFunctor callback_in)
+             PrivateKeyPtr private_key)
       : LookupArgs(kDelete, target, close_contacts, num_contacts_requested,
                    private_key),
         kSuccessThreshold(success_threshold),
         second_phase_rpcs_in_flight(0),
         successes(0),
         kValue(value),
-        kSignature(signature),
-        callback(callback_in) {}
+        kSignature(signature) {}
   const int kSuccessThreshold;
   int second_phase_rpcs_in_flight, successes;
   const std::string kValue, kSignature;
-  DeleteFunctor callback;
 };
 
 struct UpdateArgs : public LookupArgs {
@@ -207,8 +201,7 @@ struct UpdateArgs : public LookupArgs {
              const std::string &new_value,
              const std::string &new_signature,
              const bptime::time_duration &time_to_live,
-             PrivateKeyPtr private_key,
-             UpdateFunctor callback_in)
+             PrivateKeyPtr private_key)
       : LookupArgs(kUpdate, target, close_contacts, num_contacts_requested,
                    private_key),
         kSuccessThreshold(success_threshold),
@@ -220,8 +213,7 @@ struct UpdateArgs : public LookupArgs {
         kOldSignature(old_signature),
         kNewValue(new_value),
         kNewSignature(new_signature),
-        kSecondsToLive(time_to_live.total_seconds()),
-        callback(callback_in) {}
+        kSecondsToLive(time_to_live.total_seconds()) {}
   const int kSuccessThreshold;
   // store_rpcs_in_flight and store_successes relate to the Store part of the
   // second phase.  second_phase_rpcs_in_flight and successes relate to the
@@ -230,7 +222,6 @@ struct UpdateArgs : public LookupArgs {
          successes;
   const std::string kOldValue, kOldSignature, kNewValue, kNewSignature;
   const bptime::seconds kSecondsToLive;
-  UpdateFunctor callback;
 };
 
 struct GetContactArgs : public LookupArgs {

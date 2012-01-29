@@ -71,24 +71,10 @@ class Node {
   // listening_transport is responsible for listening only, not sending.  It
   // need not be listening before it is passed, it will be started in Join.
   //
-  // default_securifier is responsible for signing, verification, encrypting and
-  // decrypting messages and values.  If it is an invalid pointers, a basic
-  // instantiation will be made.  For all other member functions where a
-  // securifer is passed, if it is invalid, this default_securifier will be used
-  // instead.
-  //
   // alternative_store can be used to augment / complement the native Kademlia
   // datastore of <key,values>.  If alternative_store is an invalid pointer, no
   // default is instantiated, and all values are held in memory in datastore.
   //
-  // client_only_node specifies whether the node should be treated as a client
-  // on the network rather than a full peer.  In client mode, the node does not
-  // accept store requests and is not added to other nodes' routing tables.
-  //
-  // k, alpha and beta are as defined for standard Kademlia, i.e. number of
-  // contacts returned from a Find RPC, parallel level of Find RPCs, and number
-  // of returned Find RPCs required to start a subsequent iteration
-  // respectively.
   //
   // mean_refresh_interval indicates the average interval between calls to
   // refresh values.
@@ -96,12 +82,7 @@ class Node {
        TransportPtr listening_transport,
        MessageHandlerPtr message_handler,
        KeyPairPtr default_key_pair,
-       AlternativeStorePtr alternative_store,
-       bool client_only_node,
-       const uint16_t &k,
-       const uint16_t &alpha,
-       const uint16_t &beta,
-       const boost::posix_time::time_duration &mean_refresh_interval);
+       AlternativeStorePtr alternative_store);
 
   ~Node();
 
@@ -118,46 +99,6 @@ class Node {
   // bootstrap_contacts.
   void Leave(std::vector<Contact> *bootstrap_contacts);
 
-  // Store <key,value,signature> for ttl.  Infinite ttl is indicated by
-  // boost::posix_time::pos_infin.  If signature is empty, the value is signed
-  // using securifier, unless it is invalid, in which case the node's
-  // default_securifier signs value.  If signature is not empty, it is
-  // validated by securifier or default_securifer.
-  void Store(const Key &key,
-             const std::string &value,
-             const std::string &signature,
-             const boost::posix_time::time_duration &ttl,
-             PrivateKeyPtr private_key,
-             StoreFunctor callback);
-
-  // Delete <key,value,signature> from network.  If signature is empty, the
-  // value is signed using securifier, unless it is invalid, in which case
-  // the node's default_securifier signs value.  If signature is not empty, it
-  // is validated by securifier or default_securifer.  The securifier must sign
-  // and encrypt with the same cryptographic keys as were used when the
-  // <key,value,signature> was stored.
-  void Delete(const Key &key,
-              const std::string &value,
-              const std::string &signature,
-              PrivateKeyPtr private_key,
-              DeleteFunctor callback);
-
-  // Replace <key,old_value,old_signature> with <key,new_value,new_signature>
-  // on the network.  If either signature is empty, the corresponding value is
-  // signed using securifier, unless it is invalid, in which case the node's
-  // default_securifier signs the value.  If a signature is not empty, it is
-  // validated by securifier or default_securifer.  The securifier must sign
-  // and encrypt with the same cryptographic keys as were used when the
-  // <key,old_value,old_signature> was stored.  Infinite ttl is indicated by
-  // boost::posix_time::pos_infin.
-  void Update(const Key &key,
-              const std::string &new_value,
-              const std::string &new_signature,
-              const std::string &old_value,
-              const std::string &old_signature,
-              const boost::posix_time::time_duration &ttl,
-              PrivateKeyPtr private_key,
-              UpdateFunctor callback);
 
   // Find value(s) on the network.  The callback will always have passed to it
   // the contact details of the node needing a cache copy of the value(s) (i.e.
@@ -215,20 +156,6 @@ class Node {
   // against a given public key.
   void SetValidate(asymm::ValidateFunctor validate_functor);
 
-  // Mark contact in routing table as having just been seen (i.e. contacted).
-  void SetLastSeenToNow(const Contact &contact);
-
-  // Mark contact in routing table as having failed to respond correctly to an
-  // RPC request.
-  void IncrementFailedRpcs(const Contact &contact);
-
-  // Update contact in routing table with revised rank info.
-  void UpdateRankInfo(const Contact &contact, RankInfoPtr rank_info);
-
-  // Retrieve rank info from contact in routing table.  No network operation is
-  // executed.
-  RankInfoPtr GetLocalRankInfo(const Contact &contact);
-
   // Retrieve all contacts from the routing table.  No network operation is
   // executed.
   void GetAllContacts(std::vector<Contact> *contacts);
@@ -257,29 +184,6 @@ class Node {
 };
 
 
-struct FindValueReturns {
-  FindValueReturns() : return_code(kPendingResult),
-                       values_and_signatures(),
-                       closest_nodes(),
-                       alternative_store_holder(),
-                       needs_cache_copy() {}
-  FindValueReturns(
-      int return_code_in,
-      const std::vector<ValueAndSignature> &values_and_signatures_in,
-      const std::vector<Contact> &closest_nodes_in,
-      const Contact &alternative_store_holder_in,
-      const Contact &needs_cache_copy_in)
-          : return_code(return_code_in),
-            values_and_signatures(values_and_signatures_in),
-            closest_nodes(closest_nodes_in),
-            alternative_store_holder(alternative_store_holder_in),
-            needs_cache_copy(needs_cache_copy_in) {}
-  int return_code;
-  std::vector<ValueAndSignature> values_and_signatures;
-  std::vector<Contact> closest_nodes;
-  Contact alternative_store_holder;
-  Contact needs_cache_copy;
-};
 
 }  // namespace dht
 

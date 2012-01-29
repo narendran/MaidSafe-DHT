@@ -56,42 +56,18 @@ class FindValueRequest;
 class FindValueResponse;
 class FindNodesRequest;
 class FindNodesResponse;
-class StoreRequest;
-class StoreResponse;
-class StoreRefreshRequest;
-class StoreRefreshResponse;
-class DeleteRequest;
-class DeleteResponse;
-class DeleteRefreshRequest;
-class DeleteRefreshResponse;
-class UpdateRequest;
-class UpdateResponse;
-class DownlistNotification;
 }  // namespace protobuf
 
 namespace test {
 class KademliaMessageHandlerTest_BEH_WrapMessagePingResponse_Test;
 class KademliaMessageHandlerTest_BEH_WrapMessageFindValueResponse_Test;
 class KademliaMessageHandlerTest_BEH_WrapMessageFindNodesResponse_Test;
-class KademliaMessageHandlerTest_BEH_WrapMessageStoreResponse_Test;
-class KademliaMessageHandlerTest_BEH_WrapMessageStoreRefreshResponse_Test;
-class KademliaMessageHandlerTest_BEH_WrapMessageDeleteResponse_Test;
-class KademliaMessageHandlerTest_BEH_WrapMessageDeleteRefreshResponse_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessagePingRqst_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessagePingRsp_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFValRqst_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFValRsp_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFNodeRqst_Test;
 class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFNodeRsp_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRqst_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRsp_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRefRqst_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRefRsp_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRqst_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRsp_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRqst_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRsp_Test;
-class KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDownlist_Test;
 class KademliaMessageHandlerTest;
 }  // namespace test
 
@@ -104,16 +80,7 @@ enum MessageType {
   kFindValueRequest,
   kFindValueResponse,
   kFindNodesRequest,
-  kFindNodesResponse,
-  kStoreRequest,
-  kStoreResponse,
-  kStoreRefreshRequest,
-  kStoreRefreshResponse,
-  kDeleteRequest,
-  kDeleteResponse,
-  kDeleteRefreshRequest,
-  kDeleteRefreshResponse,
-  kDownlistNotification
+  kFindNodesResponse
 };
 
 class MessageHandler : public transport::MessageHandler {
@@ -148,54 +115,6 @@ class MessageHandler : public transport::MessageHandler {
       void(const transport::Info&,
            const protobuf::FindNodesResponse&)>> FindNodesRspSigPtr;
 
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::StoreRequest&,
-           const std::string&,
-           const std::string&,
-           protobuf::StoreResponse*,
-           transport::Timeout*)>> StoreReqSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::StoreResponse&)>> StoreRspSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::StoreRefreshRequest&,
-           protobuf::StoreRefreshResponse*,
-           transport::Timeout*)>> StoreRefreshReqSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::StoreRefreshResponse&)>> StoreRefreshRspSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::DeleteRequest&,
-           const std::string&,
-           const std::string&,
-           protobuf::DeleteResponse*,
-           transport::Timeout*)>> DeleteReqSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::DeleteResponse&)>> DeleteRspSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::DeleteRefreshRequest&,
-           protobuf::DeleteRefreshResponse*,
-           transport::Timeout*)>> DeleteRefreshReqSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::DeleteRefreshResponse&)>> DeleteRefreshRspSigPtr;
-
-  typedef std::shared_ptr<bs2::signal<  // NOLINT
-      void(const transport::Info&,
-           const protobuf::DownlistNotification&,
-           transport::Timeout*)>> DownlistNtfSigPtr;
 
   explicit MessageHandler(PrivateKeyPtr private_key)
     : transport::MessageHandler(private_key),
@@ -204,16 +123,7 @@ class MessageHandler : public transport::MessageHandler {
       on_find_value_request_(new FindValueReqSigPtr::element_type),
       on_find_value_response_(new FindValueRspSigPtr::element_type),
       on_find_nodes_request_(new FindNodesReqSigPtr::element_type),
-      on_find_nodes_response_(new FindNodesRspSigPtr::element_type),
-      on_store_request_(new StoreReqSigPtr::element_type),
-      on_store_response_(new StoreRspSigPtr::element_type),
-      on_store_refresh_request_(new StoreRefreshReqSigPtr::element_type),
-      on_store_refresh_response_(new StoreRefreshRspSigPtr::element_type),
-      on_delete_request_(new DeleteReqSigPtr::element_type),
-      on_delete_response_(new DeleteRspSigPtr::element_type),
-      on_delete_refresh_request_(new DeleteRefreshReqSigPtr::element_type),
-      on_delete_refresh_response_(new DeleteRefreshRspSigPtr::element_type),
-      on_downlist_notification_(new DownlistNtfSigPtr::element_type) {}
+      on_find_nodes_response_(new FindNodesRspSigPtr::element_type) {}
   virtual ~MessageHandler() {}
 
   std::string WrapMessage(const protobuf::PingRequest &msg,
@@ -222,16 +132,7 @@ class MessageHandler : public transport::MessageHandler {
                           const asymm::PublicKey &recipient_public_key);
   std::string WrapMessage(const protobuf::FindNodesRequest &msg,
                           const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::StoreRequest &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::StoreRefreshRequest &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::DeleteRequest &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::DeleteRefreshRequest &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::DownlistNotification &msg,
-                          const asymm::PublicKey &recipient_public_key);
+
 
   PingReqSigPtr on_ping_request() { return on_ping_request_; }
   PingRspSigPtr on_ping_response() { return on_ping_response_; }
@@ -242,25 +143,6 @@ class MessageHandler : public transport::MessageHandler {
   FindNodesReqSigPtr on_find_nodes_request() { return on_find_nodes_request_; }
   FindNodesRspSigPtr on_find_nodes_response() {
     return on_find_nodes_response_;
-  }
-  StoreReqSigPtr on_store_request() { return on_store_request_; }
-  StoreRspSigPtr on_store_response() { return on_store_response_; }
-  StoreRefreshReqSigPtr on_store_refresh_request() {
-    return on_store_refresh_request_;
-  }
-  StoreRefreshRspSigPtr on_store_refresh_response() {
-    return on_store_refresh_response_;
-  }
-  DeleteReqSigPtr on_delete_request() { return on_delete_request_; }
-  DeleteRspSigPtr on_delete_response() { return on_delete_response_; }
-  DeleteRefreshReqSigPtr on_delete_refresh_request() {
-    return on_delete_refresh_request_;
-  }
-  DeleteRefreshRspSigPtr on_delete_refresh_response() {
-    return on_delete_refresh_response_;
-  }
-  DownlistNtfSigPtr on_downlist_notification() {
-    return on_downlist_notification_;
   }
 
  protected:
@@ -276,25 +158,12 @@ class MessageHandler : public transport::MessageHandler {
   friend class test::KademliaMessageHandlerTest_BEH_WrapMessagePingResponse_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_WrapMessageFindValueResponse_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_WrapMessageFindNodesResponse_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_WrapMessageStoreResponse_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_WrapMessageStoreRefreshResponse_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_WrapMessageDeleteResponse_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_WrapMessageDeleteRefreshResponse_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessagePingRqst_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessagePingRsp_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFValRqst_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFValRsp_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFNodeRqst_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageFNodeRsp_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRqst_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRsp_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRefRqst_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageStoreRefRsp_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRqst_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRsp_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRqst_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDeleteRefRsp_Test;  // NOLINT
-  friend class test::KademliaMessageHandlerTest_BEH_ProcessSerialisedMessageDownlist_Test;  // NOLINT
   friend class test::KademliaMessageHandlerTest;
 
   MessageHandler(const MessageHandler&);
@@ -306,14 +175,6 @@ class MessageHandler : public transport::MessageHandler {
                           const asymm::PublicKey &recipient_public_key);
   std::string WrapMessage(const protobuf::FindNodesResponse &msg,
                           const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::StoreResponse &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::StoreRefreshResponse &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::DeleteResponse &msg,
-                          const asymm::PublicKey &recipient_public_key);
-  std::string WrapMessage(const protobuf::DeleteRefreshResponse &msg,
-                          const asymm::PublicKey &recipient_public_key);
 
   PingReqSigPtr on_ping_request_;
   PingRspSigPtr on_ping_response_;
@@ -321,15 +182,7 @@ class MessageHandler : public transport::MessageHandler {
   FindValueRspSigPtr on_find_value_response_;
   FindNodesReqSigPtr on_find_nodes_request_;
   FindNodesRspSigPtr on_find_nodes_response_;
-  StoreReqSigPtr on_store_request_;
-  StoreRspSigPtr on_store_response_;
-  StoreRefreshReqSigPtr on_store_refresh_request_;
-  StoreRefreshRspSigPtr on_store_refresh_response_;
-  DeleteReqSigPtr on_delete_request_;
-  DeleteRspSigPtr on_delete_response_;
-  DeleteRefreshReqSigPtr on_delete_refresh_request_;
-  DeleteRefreshRspSigPtr on_delete_refresh_response_;
-  DownlistNtfSigPtr on_downlist_notification_;
+
 };
 
 }  // namespace dht

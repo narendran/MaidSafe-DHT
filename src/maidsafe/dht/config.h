@@ -70,15 +70,11 @@ enum OnlineStatus { kOffline, kOnline, kAttemptingConnect };
 
 struct FindValueReturns;
 
-typedef std::pair<std::string, std::string> ValueAndSignature;
-
 typedef std::shared_ptr<boost::signals2::signal<void(OnlineStatus)>>
         OnOnlineStatusChangePtr;
 
-// Functor for use in Node::Join, Store, Delete and Update.  Parameter is the
-// return code.
-typedef std::function<void(int)> JoinFunctor, StoreFunctor, DeleteFunctor,  // NOLINT (Fraser)
-                                 UpdateFunctor, PingFunctor;
+// Functor for use in Node::Join. Parameter is the return code.
+typedef std::function<void(int)> JoinFunctor, PingFunctor;
 
 // Functor for use in Node::FindValue.  Parameters in order are: return code,
 // value(s) and signature(s) if found, k closest nodes if value not found,
@@ -102,7 +98,6 @@ typedef NodeId Key;
 typedef boost::asio::ip::address IP;
 typedef uint16_t Port;
 
-
 typedef boost::asio::io_service AsioService;
 typedef std::shared_ptr<MessageHandler> MessageHandlerPtr;
 typedef std::shared_ptr<transport::Transport> TransportPtr;
@@ -112,25 +107,11 @@ typedef std::shared_ptr<asymm::PublicKey> PublicKeyPtr;
 typedef std::shared_ptr<AlternativeStore> AlternativeStorePtr;
 typedef std::shared_ptr<transport::Info> RankInfoPtr;
 
-
 // The size of DHT keys and node IDs in bytes.
 const uint16_t kKeySizeBytes(64);
 
-// The mean time between refreshes
-const boost::posix_time::seconds kMeanRefreshInterval(1800);
+const uint8_t kClosestNodes(8);
 
-// The ratio of k successful individual kad store RPCs to yield overall success.
-const double kMinSuccessfulPecentageStore(0.75);
-
-// The ratio of k successful individual kad delete RPCs to yield overall success
-const double kMinSuccessfulPecentageDelete(0.75);
-
-// The ratio of k successful individual kad update RPCs to yield overall success
-const double kMinSuccessfulPecentageUpdate(0.75);
-
-// The number of failed RPCs tolerated before a contact is removed from the
-// routing table.
-const uint16_t kFailedRpcTolerance(2);
 
 // The minimum number of directly-connected contacts returned by
 // GetBootstrapContacts.  If there are less than this, the list has all other

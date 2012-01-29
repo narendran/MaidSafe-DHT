@@ -148,7 +148,7 @@ MS_ADD_EXECUTABLE(TESTkademlia Tests ${ALL_FILES_DHT_TESTS_DIR})
 MS_ADD_EXECUTABLE(TESTnode_functional Tests ${SOURCE_FILES_DHT_TESTS_FUNCTIONAL_NODE} ${HEADER_FILES_DHT_TESTS_FUNCTIONALS})
 MS_ADD_EXECUTABLE(TESTnode_impl_functional Tests ${SOURCE_FILES_DHT_TESTS_FUNCTIONAL_NODE_IMPL} ${HEADER_FILES_DHT_TESTS_FUNCTIONALS})
 MS_ADD_EXECUTABLE(TESTnode_churn Tests ${SOURCE_FILES_DHT_TESTS_FUNCTIONAL_NODE_CHURN} ${HEADER_FILES_DHT_TESTS_FUNCTIONALS})
-MS_ADD_EXECUTABLE(KademliaDemo Demo ${ALL_FILES_DEMO_DIR})
+#MS_ADD_EXECUTABLE(KademliaDemo Demo ${ALL_FILES_DEMO_DIR})
 MS_ADD_EXECUTABLE(Benchmark Benchmark ${ALL_FILES_BENCHMARK_DIR})
 
 TARGET_LINK_LIBRARIES(maidsafe_dht_static
@@ -161,7 +161,7 @@ TARGET_LINK_LIBRARIES(TESTkademlia maidsafe_dht_static gmock_static)
 TARGET_LINK_LIBRARIES(TESTnode_functional maidsafe_dht_static gtest_static)
 TARGET_LINK_LIBRARIES(TESTnode_impl_functional maidsafe_dht_static gtest_static)
 TARGET_LINK_LIBRARIES(TESTnode_churn maidsafe_dht_static gtest_static)
-TARGET_LINK_LIBRARIES(KademliaDemo maidsafe_dht_static boost_program_options)
+#TARGET_LINK_LIBRARIES(KademliaDemo maidsafe_dht_static boost_program_options)
 TARGET_LINK_LIBRARIES(Benchmark maidsafe_dht_static boost_program_options)
 
 
@@ -183,7 +183,7 @@ IF(MSVC)
   SET_TARGET_PROPERTIES(maidsafe_dht_static TESTkademlia PROPERTIES COMPILE_FLAGS "/bigobj")
   SET_TARGET_PROPERTIES(maidsafe_dht_static PROPERTIES STATIC_LIBRARY_FLAGS_RELEASE "/LTCG")
 ELSEIF(UNIX)
-  SET_TARGET_PROPERTIES(KademliaDemo PROPERTIES COMPILE_FLAGS "-g")
+ # SET_TARGET_PROPERTIES(KademliaDemo PROPERTIES COMPILE_FLAGS "-g")
   FILE(GLOB PROTO_SOURCE_FILES "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/*.pb.cc"
                                "${PROJECT_SOURCE_DIR}/src/maidsafe/dht/tests/*.pb.cc")
   SET_SOURCE_FILES_PROPERTIES(${PROJECT_SOURCE_DIR}/src/maidsafe/dht/service.cc

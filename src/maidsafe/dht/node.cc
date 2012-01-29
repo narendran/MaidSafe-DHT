@@ -60,35 +60,6 @@ void Node::Leave(std::vector<Contact> *bootstrap_contacts) {
   pimpl_->Leave(bootstrap_contacts);
 }
 
-void Node::Store(const Key &key,
-                 const std::string &value,
-                 const std::string &signature,
-                 const boost::posix_time::time_duration &ttl,
-                 PrivateKeyPtr private_key,
-                 StoreFunctor callback) {
-  pimpl_->Store(key, value, signature, ttl, private_key, callback);
-}
-
-void Node::Delete(const Key &key,
-                 const std::string &value,
-                 const std::string &signature,
-                 PrivateKeyPtr private_key,
-                 DeleteFunctor callback) {
-  pimpl_->Delete(key, value, signature, private_key, callback);
-}
-
-void Node::Update(const Key &key,
-                  const std::string &new_value,
-                  const std::string &new_signature,
-                  const std::string &old_value,
-                  const std::string &old_signature,
-                  const boost::posix_time::time_duration &ttl,
-                  PrivateKeyPtr private_key,
-                  UpdateFunctor callback) {
-  pimpl_->Update(key, new_value, new_signature, old_value, old_signature,
-                 ttl, private_key, callback);
-}
-
 void Node::FindValue(const Key &key,
                      PrivateKeyPtr private_key,
                      FindValueFunctor callback,
@@ -121,10 +92,6 @@ void Node::SetValidate(asymm::ValidateFunctor validate_functor) {
   pimpl_->SetValidate(validate_functor);
 }
 
-void Node::SetLastSeenToNow(const Contact &contact) {
-  pimpl_->SetLastSeenToNow(contact);
-}
-
 void Node::IncrementFailedRpcs(const Contact &contact) {
   pimpl_->IncrementFailedRpcs(contact);
 }
@@ -155,14 +122,6 @@ Contact Node::contact() const {
 
 bool Node::joined() const {
   return pimpl_->joined();
-}
-
-AlternativeStorePtr Node::alternative_store() {
-  return pimpl_->alternative_store();
-}
-
-OnOnlineStatusChangePtr Node::on_online_status_change() {
-  return pimpl_->on_online_status_change();
 }
 
 bool Node::client_only_node() const {

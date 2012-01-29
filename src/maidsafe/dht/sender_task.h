@@ -32,7 +32,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 
 #include "maidsafe/transport/transport.h"
-#include "maidsafe/dht/data_store.h"
 
 namespace maidsafe  {
 
