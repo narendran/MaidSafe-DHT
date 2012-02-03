@@ -35,8 +35,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
-#include "maidsafe/common/breakpad.h"
-
+#ifndef __APPLE__
+  #include "maidsafe/common/breakpad.h"
+#endif
 #include "maidsafe/dht/log.h"
 #include "maidsafe/dht/version.h"
 #include "maidsafe/dht/config.h"
@@ -188,6 +189,7 @@ void validate(boost::any& v, const std::vector<std::string>& values,
 
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);
+#ifndef __APPLE__
   fs::path cur_path = fs::initial_path();
   maidsafe::crash_report::ProjectInfo current_project("MaidSafe-DHT",
                         boost::lexical_cast<std::string>(MAIDSAFE_DHT_VERSION));
@@ -203,6 +205,7 @@ int main(int argc, char **argv) {
                                         maidsafe::crash_report::DumpCallback,
                                         &current_project,
                                         true);
+#endif
 #endif
   try {
     PortRange port_range(8000, 65535);

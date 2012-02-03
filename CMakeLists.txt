@@ -151,12 +151,20 @@ MS_ADD_EXECUTABLE(TESTnode_churn Tests ${SOURCE_FILES_DHT_TESTS_FUNCTIONAL_NODE_
 MS_ADD_EXECUTABLE(KademliaDemo Demo ${ALL_FILES_DEMO_DIR})
 MS_ADD_EXECUTABLE(Benchmark Benchmark ${ALL_FILES_BENCHMARK_DIR})
 
+IF(NOT APPLE)
 TARGET_LINK_LIBRARIES(maidsafe_dht_static
                         maidsafe_transport_static
                         maidsafe_common_static
                         breakpad_static
                         boost_date_time
                         boost_regex)
+ELSE()
+TARGET_LINK_LIBRARIES(maidsafe_dht_static
+                        maidsafe_transport_static
+                        maidsafe_common_static
+                        boost_date_time
+                        boost_regex)
+ENDIF()
 TARGET_LINK_LIBRARIES(TESTkademlia maidsafe_dht_static gmock_static)
 TARGET_LINK_LIBRARIES(TESTnode_functional maidsafe_dht_static gtest_static)
 TARGET_LINK_LIBRARIES(TESTnode_impl_functional maidsafe_dht_static gtest_static)
