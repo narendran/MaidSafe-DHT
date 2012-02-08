@@ -53,9 +53,9 @@ namespace benchmark {
 
 Operations::Operations(std::shared_ptr<Node> node)
     : node_(node),
-      private_key_(),
+      public_key_validation_(),
       public_key_(),
-      public_key_validation_() {
+      private_key_() {
 //  cryobj_.set_symm_algorithm(crypto::AES_256);
 //  cryobj_.set_hash_algorithm(crypto::SHA_512);
   asymm::Keys kp;

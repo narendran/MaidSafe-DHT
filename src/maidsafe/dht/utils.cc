@@ -136,7 +136,7 @@ void SortContacts(const NodeId &target_key, std::vector<Contact> *contacts) {
 }
 
 void StubContactValidationGetter(
-    asymm::Identity identity,
+    asymm::Identity /*identity*/,
     asymm::GetPublicKeyAndValidationCallback callback) {
   callback(asymm::PublicKey(), asymm::ValidationToken());
 }

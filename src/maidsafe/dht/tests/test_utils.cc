@@ -343,7 +343,7 @@ bool WithinKClosest(const NodeId &node_id,
 }
 
 void ExecDummyContactValidationGetter(
-    asymm::Identity identity,
+    asymm::Identity /*identity*/,
     asymm::GetPublicKeyAndValidationCallback callback) {
   // Imitating delay in lookup for kNetworkDelay milliseconds
   Sleep(kNetworkDelay);
