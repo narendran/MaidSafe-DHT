@@ -151,6 +151,14 @@ MS_ADD_EXECUTABLE(TESTnode_churn Tests ${SOURCE_FILES_DHT_TESTS_FUNCTIONAL_NODE_
 MS_ADD_EXECUTABLE(KademliaDemo Demo ${ALL_FILES_DEMO_DIR})
 MS_ADD_EXECUTABLE(Benchmark Benchmark ${ALL_FILES_BENCHMARK_DIR})
 
+# This target allows maidsafe_dht_static to be installed without building all project targets
+IF(MSVC)
+  ADD_CUSTOM_TARGET(install_fast ${CMAKE_COMMAND} -DBUILD_TYPE=$<CONFIGURATION> -P ${CMAKE_BINARY_DIR}/cmake_install.cmake)
+ELSE()
+  ADD_CUSTOM_TARGET(install_fast ${CMAKE_COMMAND} -DBUILD_TYPE=${CMAKE_BUILD_TYPE} -P ${CMAKE_BINARY_DIR}/cmake_install.cmake)
+ENDIF()
+ADD_DEPENDENCIES(install_fast maidsafe_dht_static)
+
 TARGET_LINK_LIBRARIES(maidsafe_dht_static
                         maidsafe_transport_static
                         maidsafe_common_static
