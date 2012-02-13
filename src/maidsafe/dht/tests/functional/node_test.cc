@@ -58,7 +58,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/node_container.h"
 #include "maidsafe/dht/tests/functional/test_node_environment.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 namespace fs = boost::filesystem;
 namespace bptime = boost::posix_time;
 
@@ -438,7 +438,7 @@ TEST_F(NodeTest, FUNC_MultipleNodesFindSingleValue) {
   for (auto it(env_->node_containers_.begin());
        it != env_->node_containers_.end(); ++it) {
     (*it)->set_find_value_functor(std::bind(&MultiNodeFindValueCallback,
-                                            arg::_1, &env_->mutex_,
+                                            args::_1, &env_->mutex_,
                                             &env_->cond_var_,
                                             &find_value_returns_container));
   }

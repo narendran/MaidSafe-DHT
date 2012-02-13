@@ -35,7 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/utils.h"
 #include "maidsafe/dht/tests/test_utils.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -324,7 +324,7 @@ void SortIds(const NodeId &target_key, std::vector<NodeId> *node_ids) {
       std::bind(static_cast<bool(*)(const NodeId&, // NOLINT
                                     const NodeId&,
                                     const NodeId&)>(&NodeId::CloserToTarget),
-                arg::_1, arg::_2, target_key));
+                args::_1, args::_2, target_key));
 }
 
 bool WithinKClosest(const NodeId &node_id,
@@ -335,7 +335,7 @@ bool WithinKClosest(const NodeId &node_id,
   std::function<bool(const NodeId&, const NodeId&)> predicate = // NOLINT (Fraser)
       std::bind(static_cast<bool(*)(const NodeId&, const NodeId&, // NOLINT (Fraser)
                                     const NodeId&)>(&NodeId::CloserToTarget),
-                arg::_1, arg::_2, target_key);
+                args::_1, args::_2, target_key);
   std::partial_sort(node_ids.begin(), node_ids.begin() + k, node_ids.end(),
                     predicate);
   return (std::find(node_ids.begin(), node_ids.begin() + k, node_id) !=

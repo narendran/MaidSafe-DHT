@@ -56,7 +56,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     Please update the maidsafe-dht library.
 #endif
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 namespace bptime = boost::posix_time;
 
 namespace maidsafe {
@@ -454,7 +454,7 @@ int NodeContainer<NodeType>::Start(
   boost::condition_variable cond_var;
   NodeId node_id(key_pair_->identity);
   JoinFunctor join_functor(std::bind(&NodeContainer<NodeType>::JoinCallback,
-                           this, arg::_1, &mutex, &cond_var));
+                           this, args::_1, &mutex, &cond_var));
 
   boost::function<bool()> wait_functor = boost::bind(
       &NodeContainer<NodeType>::ResultReady, this, &join_result_);
@@ -643,7 +643,7 @@ void NodeContainer<NodeType>::MakeJoinFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   join_functor_ = std::bind(&NodeContainer<NodeType>::JoinCallback, this,
-                            arg::_1, mutex, cond_var);
+                            args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -651,7 +651,7 @@ void NodeContainer<NodeType>::MakeStoreFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   store_functor_ = std::bind(&NodeContainer<NodeType>::StoreCallback, this,
-                             arg::_1, mutex, cond_var);
+                             args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -659,7 +659,7 @@ void NodeContainer<NodeType>::MakeDeleteFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   delete_functor_ = std::bind(&NodeContainer<NodeType>::DeleteCallback, this,
-                              arg::_1, mutex, cond_var);
+                              args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -667,7 +667,7 @@ void NodeContainer<NodeType>::MakeUpdateFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   update_functor_ = std::bind(&NodeContainer<NodeType>::UpdateCallback, this,
-                              arg::_1, mutex, cond_var);
+                              args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -675,7 +675,7 @@ void NodeContainer<NodeType>::MakeFindValueFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   find_value_functor_ = std::bind(&NodeContainer<NodeType>::FindValueCallback,
-                                  this, arg::_1, mutex, cond_var);
+                                  this, args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -683,7 +683,7 @@ void NodeContainer<NodeType>::MakeFindNodesFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   find_nodes_functor_ = std::bind(&NodeContainer<NodeType>::FindNodesCallback,
-                                  this, arg::_1, arg::_2, mutex, cond_var);
+                                  this, args::_1, args::_2, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -691,7 +691,7 @@ void NodeContainer<NodeType>::MakeGetContactFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   get_contact_functor_ = std::bind(&NodeContainer<NodeType>::GetContactCallback,
-                                   this, arg::_1, arg::_2, mutex, cond_var);
+                                   this, args::_1, args::_2, mutex, cond_var);
 }
 
 template <typename NodeType>
@@ -699,7 +699,7 @@ void NodeContainer<NodeType>::MakePingFunctor(
     boost::mutex *mutex,
     boost::condition_variable *cond_var) {
   ping_functor_ = std::bind(&NodeContainer<NodeType>::PingCallback, this,
-                            arg::_1, mutex, cond_var);
+                            args::_1, mutex, cond_var);
 }
 
 template <typename NodeType>

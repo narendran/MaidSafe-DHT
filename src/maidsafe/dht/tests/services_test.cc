@@ -56,7 +56,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/return_codes.h"
 #include "maidsafe/dht/tests/test_utils.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -135,7 +135,7 @@ class ServicesTest: public CreateContactAndNodeId, public testing::Test {
         num_of_pings_(0) {
     service_->set_node_joined(true);
     service_->set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
+        &DummyContactValidationGetter, args::_1, args::_2));
   }
 
   virtual void SetUp() {}
@@ -417,8 +417,9 @@ TEST_F(ServicesTest, BEH_Store) {
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
-    service.set_validate(std::bind(&ValidateFalse, arg::_1, arg::_2, arg::_3));
+        &DummyContactValidationGetter, args::_1, args::_2));
+    service.set_validate(std::bind(&ValidateFalse, args::_1, args::_2,
+                                   args::_3));
 
     protobuf::StoreResponse store_response;
     service.Store(info_, store_request, message, message_sig, &store_response,
@@ -542,8 +543,9 @@ TEST_F(ServicesTest, BEH_Delete) {
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
-    service.set_validate(std::bind(&ValidateFalse, arg::_1, arg::_2, arg::_3));
+        &DummyContactValidationGetter, args::_1, args::_2));
+    service.set_validate(std::bind(&ValidateFalse, args::_1, args::_2,
+                                   args::_3));
 
     EXPECT_EQ(kSuccess, data_store_->StoreValue(kvs, old_ttl, request_signature,
                                                 false));
@@ -668,8 +670,9 @@ TEST_F(ServicesTest, FUNC_StoreRefresh) {
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
-    service.set_validate(std::bind(&ValidateFalse, arg::_1, arg::_2, arg::_3));
+        &DummyContactValidationGetter, args::_1, args::_2));
+    service.set_validate(std::bind(&ValidateFalse, args::_1, args::_2,
+                                   args::_3));
 
     protobuf::StoreRefreshResponse store_refresh_response;
     service.StoreRefresh(info_, store_refresh_request, &store_refresh_response,
@@ -797,8 +800,9 @@ TEST_F(ServicesTest, FUNC_DeleteRefresh) {
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
-    service.set_validate(std::bind(&ValidateFalse, arg::_1, arg::_2, arg::_3));
+        &DummyContactValidationGetter, args::_1, args::_2));
+    service.set_validate(std::bind(&ValidateFalse, args::_1, args::_2,
+                                   args::_3));
 
     EXPECT_EQ(kSuccess, data_store_->StoreValue(kvs, old_ttl, request_signature,
                                                 false));
@@ -1184,7 +1188,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
                     GetPrivateKeyPtr(key_pair_), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
+        &DummyContactValidationGetter, args::_1, args::_2));
 
     find_value_req.set_key(target_key);
     protobuf::FindValueResponse find_value_rsp;
@@ -1214,7 +1218,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
     service.set_node_joined(true);
     service.set_node_contact(node_contact);
     service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, arg::_1, arg::_2));
+        &DummyContactValidationGetter, args::_1, args::_2));
 
     find_value_req.set_key(target_key);
     protobuf::FindValueResponse find_value_rsp;
@@ -1249,7 +1253,7 @@ TEST_F(ServicesTest, BEH_Downlist) {
   boost::mutex mutex;
   boost::condition_variable cond_var;
   routing_table_->ping_down_contact()->connect(
-      std::bind(&ServicesTest::PingDownlistCallback, this, arg::_1,
+      std::bind(&ServicesTest::PingDownlistCallback, this, args::_1,
                 &pinged_node_ids, &mutex, &cond_var));
   {
     boost::mutex::scoped_lock lock(mutex);

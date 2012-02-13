@@ -89,10 +89,10 @@ struct LookupArgs {
              PrivateKeyPtr priv_key)
       : lookup_contacts(std::bind(static_cast<bool(*)(const Contact&,  // NOLINT (Fraser)
             const Contact&, const NodeId&)>(&CloserToTarget),
-            arg::_1, arg::_2, target)),
+            args::_1, args::_2, target)),
         downlist(std::bind(static_cast<bool(*)(const Contact&,  // NOLINT (Fraser)
                  const Contact&, const NodeId&)>(&CloserToTarget),
-                 arg::_1, arg::_2, target)),
+                 args::_1, args::_2, target)),
         cache_candidate(),
         mutex(),
         total_lookup_rpcs_in_flight(0),

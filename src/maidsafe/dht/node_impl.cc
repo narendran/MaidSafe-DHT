@@ -52,7 +52,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/service.h"
 #include "maidsafe/dht/utils.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 namespace dht {
@@ -94,10 +94,10 @@ NodeImpl::NodeImpl(AsioService &asio_service,                 // NOLINT (Fraser)
       routing_table_(),
       rpcs_(),
       contact_validation_getter_(std::bind(&StubContactValidationGetter,
-                                           arg::_1, arg::_2)),
-      contact_validator_(std::bind(&StubContactValidator, arg::_1, arg::_2,
-                                   arg::_3)),
-      validate_functor_(std::bind(&StubValidate, arg::_1, arg::_2, arg::_3)),
+                                           args::_1, args::_2)),
+      contact_validator_(std::bind(&StubContactValidator, args::_1, args::_2,
+                                   args::_3)),
+      validate_functor_(std::bind(&StubValidate, args::_1, args::_2, args::_3)),
       contact_(),
       joined_(false),
       ping_oldest_contact_(),
@@ -128,7 +128,7 @@ void NodeImpl::Join(const NodeId &node_id,
   // Remove our own Contact if present
   bootstrap_contacts.erase(
       std::remove_if(bootstrap_contacts.begin(), bootstrap_contacts.end(),
-          std::bind(&HasId, arg::_1, node_id)), bootstrap_contacts.end());
+          std::bind(&HasId, args::_1, node_id)), bootstrap_contacts.end());
 
   if (!client_only_node_ && listening_transport_->listening_port() == 0) {
     return asio_service_.post(std::bind(&NodeImpl::JoinFailed, this, callback,
@@ -204,7 +204,7 @@ void NodeImpl::Join(const NodeId &node_id,
       new FindValueArgs(node_id, k_, search_contacts, true,
                         default_private_key_,
                         std::bind(&NodeImpl::JoinFindValueCallback, this,
-                                  arg::_1, bootstrap_contacts, node_id,
+                                  args::_1, bootstrap_contacts, node_id,
                                   callback, true)));
 
   DLOG(INFO) << "Before StartLookup";
@@ -233,7 +233,7 @@ void NodeImpl::JoinFindValueCallback(FindValueReturns find_value_returns,
     FindValueArgsPtr find_value_args(
         new FindValueArgs(node_id, k_, search_contacts, true,
             default_private_key_, std::bind(&NodeImpl::JoinFindValueCallback,
-                                         this, arg::_1, bootstrap_contacts,
+                                         this, args::_1, bootstrap_contacts,
                                          node_id, callback, none_reached)));
     StartLookup(find_value_args);
   } else {
@@ -255,7 +255,7 @@ void NodeImpl::JoinSucceeded(JoinFunctor callback) {
     service_->set_validate(validate_functor_);
     refresh_data_store_timer_.expires_from_now(kDataStoreCheckInterval_);
     refresh_data_store_timer_.async_wait(
-        std::bind(&NodeImpl::RefreshDataStore, this, arg::_1));
+        std::bind(&NodeImpl::RefreshDataStore, this, args::_1));
     data_store_->set_debug_id(DebugId(contact_));
   }
   callback(kSuccess);
@@ -496,8 +496,8 @@ void NodeImpl::GetContact(const NodeId &node_id, GetContactFunctor callback) {
   if ((*close_contacts.begin()).node_id() == node_id) {
     rpcs_->Ping(default_private_key_,
                 *close_contacts.begin(),
-                std::bind(&NodeImpl::GetContactPingCallback, this, arg::_1,
-                          arg::_2, *close_contacts.begin(), callback));
+                std::bind(&NodeImpl::GetContactPingCallback, this, args::_1,
+                          args::_2, *close_contacts.begin(), callback));
   } else {
     GetContactArgsPtr get_contact_args(
         new GetContactArgs(node_id, k_, close_contacts, default_private_key_,
@@ -548,7 +548,7 @@ void NodeImpl::Ping(const Contact &contact, PingFunctor callback) {
   }
   rpcs_->Ping(default_private_key_,
               contact,
-              std::bind(&NodeImpl::PingCallback, this, arg::_1, arg::_2,
+              std::bind(&NodeImpl::PingCallback, this, args::_1, args::_2,
                         contact, callback));
 }
 
@@ -636,8 +636,9 @@ void NodeImpl::DoLookupIteration(LookupArgsPtr lookup_args) {
                              lookup_args->private_key,
                              (*itr).first,
                              std::bind(&NodeImpl::IterativeFindCallback,
-                                       this, arg::_1, arg::_2, arg::_3, arg::_4,
-                                       arg::_5, (*itr).first, lookup_args));
+                                       this, args::_1, args::_2, args::_3,
+                                       args::_4, args::_5, (*itr).first,
+                                       lookup_args));
             DLOG(INFO) << "Sent RPC to " << DebugId(lookup_args->kTarget);
           } else {
             rpcs_->FindNodes(lookup_args->kTarget,
@@ -645,9 +646,9 @@ void NodeImpl::DoLookupIteration(LookupArgsPtr lookup_args) {
                              default_private_key_,
                              (*itr).first,
                              std::bind(&NodeImpl::IterativeFindCallback,
-                                       this, arg::_1, arg::_2,
+                                       this, args::_1, args::_2,
                                        std::vector<ValueAndSignature>(),
-                                       arg::_3, Contact(), (*itr).first,
+                                       args::_3, Contact(), (*itr).first,
                                        lookup_args));
           }
           ++lookup_args->total_lookup_rpcs_in_flight;
@@ -1039,7 +1040,7 @@ void NodeImpl::InitiateStorePhase(StoreArgsPtr store_args,
                    store_args->kSecondsToLive,
                    store_args->private_key,
                    (*itr).first,
-                   std::bind(&NodeImpl::StoreCallback, this, arg::_1, arg::_2,
+                   std::bind(&NodeImpl::StoreCallback, this, args::_1, args::_2,
                              (*itr).first, store_args));
       ++store_args->second_phase_rpcs_in_flight;
     }
@@ -1072,8 +1073,8 @@ void NodeImpl::InitiateDeletePhase(DeleteArgsPtr delete_args,
                     delete_args->kSignature,
                     delete_args->private_key,
                     (*itr).first,
-                    std::bind(&NodeImpl::DeleteCallback, this, arg::_1, arg::_2,
-                              (*itr).first, delete_args));
+                    std::bind(&NodeImpl::DeleteCallback, this, args::_1,
+                              args::_2, (*itr).first, delete_args));
       ++delete_args->second_phase_rpcs_in_flight;
     }
     ++itr;
@@ -1106,8 +1107,8 @@ void NodeImpl::InitiateUpdatePhase(UpdateArgsPtr update_args,
                    update_args->kSecondsToLive,
                    update_args->private_key,
                    (*itr).first,
-                   std::bind(&NodeImpl::UpdateCallback, this, arg::_1, arg::_2,
-                             (*itr).first, update_args));
+                   std::bind(&NodeImpl::UpdateCallback, this, args::_1,
+                             args::_2, (*itr).first, update_args));
       ++update_args->store_rpcs_in_flight;
       // Increment second_phase_rpcs_in_flight (representing the subsequent
       // Delete RPC) to avoid the DeleteCallback finishing early.  This assumes
@@ -1139,13 +1140,13 @@ void NodeImpl::InitiateRefreshPhase(
                             refresh_args->kSerialisedRequestSignature,
                             refresh_args->private_key, (*itr).first,
                             std::bind(&NodeImpl::HandleRpcCallback, this,
-                                      (*itr).first, arg::_1, arg::_2));
+                                      (*itr).first, args::_1, args::_2));
       } else {
         rpcs_->DeleteRefresh(refresh_args->kSerialisedRequest,
                              refresh_args->kSerialisedRequestSignature,
                              refresh_args->private_key, (*itr).first,
                              std::bind(&NodeImpl::HandleRpcCallback, this,
-                                       (*itr).first, arg::_1, arg::_2));
+                                       (*itr).first, args::_1, args::_2));
       }
     }
     ++itr;
@@ -1356,7 +1357,7 @@ void NodeImpl::StoreCallback(RankInfoPtr rank_info,
                       store_args->private_key,
                       (*itr).first,
                       std::bind(&NodeImpl::HandleRpcCallback, this,
-                                (*itr).first, arg::_1, arg::_2));
+                                (*itr).first, args::_1, args::_2));
       }
       ++itr;
       ++count;
@@ -1400,8 +1401,8 @@ void NodeImpl::UpdateCallback(RankInfoPtr rank_info,
                     update_args->kOldSignature,
                     update_args->private_key,
                     peer,
-                    std::bind(&NodeImpl::DeleteCallback, this, arg::_1, arg::_2,
-                              peer, update_args));
+                    std::bind(&NodeImpl::DeleteCallback, this, args::_1,
+                              args::_2, peer, update_args));
     else
       HandleSecondPhaseCallback<UpdateArgsPtr>(result,
           std::static_pointer_cast<UpdateArgs>(update_args));
@@ -1486,11 +1487,11 @@ void NodeImpl::RefreshDataStore(const boost::system::error_code &error_code) {
   std::vector<KeyValueTuple> key_value_tuples;
   data_store_->Refresh(&key_value_tuples);
   std::for_each(key_value_tuples.begin(), key_value_tuples.end(),
-                std::bind(&NodeImpl::RefreshData, this, arg::_1));
+                std::bind(&NodeImpl::RefreshData, this, args::_1));
   refresh_data_store_timer_.expires_at(refresh_data_store_timer_.expires_at() +
                                        kDataStoreCheckInterval_);
   refresh_data_store_timer_.async_wait(std::bind(&NodeImpl::RefreshDataStore,
-                                                 this, arg::_1));
+                                                 this, args::_1));
 }
 
 void NodeImpl::RefreshData(const KeyValueTuple &key_value_tuple) {
@@ -1525,7 +1526,7 @@ void NodeImpl::PingOldestContact(const Contact &oldest_contact,
   rpcs_->Ping(default_private_key_,
               oldest_contact,
               std::bind(&NodeImpl::PingOldestContactCallback, this,
-                        oldest_contact, arg::_1, arg::_2, replacement_contact,
+                        oldest_contact, args::_1, args::_2, replacement_contact,
                         replacement_rank_info));
 }
 
@@ -1546,15 +1547,15 @@ void NodeImpl::ConnectPingOldestContact() {
   if (ping_oldest_contact_ == boost::signals2::connection()) {
     ping_oldest_contact_ =
         routing_table_->ping_oldest_contact()->connect(
-            std::bind(&NodeImpl::PingOldestContact, this, arg::_1, arg::_2,
-                      arg::_3));
+            std::bind(&NodeImpl::PingOldestContact, this, args::_1, args::_2,
+                      args::_3));
   }
 }
 
 void NodeImpl::ValidateContact(const Contact &contact) {
   asymm::GetPublicKeyAndValidationCallback callback(
-      std::bind(&NodeImpl::ValidateContactCallback, this, contact, arg::_1,
-                arg::_2));
+      std::bind(&NodeImpl::ValidateContactCallback, this, contact, args::_1,
+                args::_2));
   contact_validation_getter_(contact.public_key_id(), callback);
 }
 
@@ -1570,7 +1571,7 @@ void NodeImpl::ValidateContactCallback(
 void NodeImpl::ConnectValidateContact() {
   if (validate_contact_ == boost::signals2::connection()) {
     validate_contact_ = routing_table_->validate_contact()->connect(
-        std::bind(&NodeImpl::ValidateContact, this, arg::_1));
+        std::bind(&NodeImpl::ValidateContact, this, args::_1));
   }
 }
 
@@ -1578,7 +1579,7 @@ void NodeImpl::PingDownContact(const Contact &down_contact) {
   rpcs_->Ping(default_private_key_,
               down_contact,
               std::bind(&NodeImpl::PingDownContactCallback, this,
-                        down_contact, arg::_1, arg::_2));
+                        down_contact, args::_1, args::_2));
 }
 
 void NodeImpl::PingDownContactCallback(Contact down_contact,
@@ -1599,7 +1600,7 @@ void NodeImpl::PingDownContactCallback(Contact down_contact,
 void NodeImpl::ConnectPingDownContact() {
   if (ping_down_contact_ == boost::signals2::connection()) {
     ping_down_contact_ = routing_table_->ping_down_contact()->connect(
-        std::bind(&NodeImpl::PingDownContact, this, arg::_1));
+        std::bind(&NodeImpl::PingDownContact, this, args::_1));
   }
 }
 

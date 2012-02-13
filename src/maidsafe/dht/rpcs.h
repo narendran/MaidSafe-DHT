@@ -55,7 +55,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/rpcs_objects.h"
 #include "maidsafe/dht/log.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 
 namespace maidsafe {
@@ -249,10 +249,10 @@ void Rpcs<TransportType>::Ping(PrivateKeyPtr private_key,
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_ping_response()->connect(
       std::bind(&Rpcs::PingCallback, this, random_data, transport::kSuccess,
-                arg::_1, arg::_2, object_indx, callback, message,
+                args::_1, args::_2, object_indx, callback, message,
                 rpcs_failure_peer));
   message_handler->on_error()->connect(
-      std::bind(&Rpcs::PingCallback, this, random_data, arg::_1,
+      std::bind(&Rpcs::PingCallback, this, random_data, args::_1,
                 transport::Info(), protobuf::PingResponse(), object_indx,
                 callback, message, rpcs_failure_peer));
   DLOG(INFO) << "\t2 " << DebugId(contact_) << " PING to " << DebugId(peer);
@@ -284,10 +284,10 @@ void Rpcs<TransportType>::FindValue(const Key &key,
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_find_value_response()->connect(std::bind(
-      &Rpcs::FindValueCallback, this, transport::kSuccess, arg::_1, arg::_2,
+      &Rpcs::FindValueCallback, this, transport::kSuccess, args::_1, args::_2,
       object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::FindValueCallback, this, arg::_1, transport::Info(),
+      &Rpcs::FindValueCallback, this, args::_1, transport::Info(),
       protobuf::FindValueResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " FIND_VALUE to " << DebugId(peer);
@@ -318,10 +318,10 @@ void Rpcs<TransportType>::FindNodes(const Key &key,
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_find_nodes_response()->connect(std::bind(
-      &Rpcs::FindNodesCallback, this, transport::kSuccess, arg::_1, arg::_2,
+      &Rpcs::FindNodesCallback, this, transport::kSuccess, args::_1, args::_2,
       object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::FindNodesCallback, this, arg::_1, transport::Info(),
+      &Rpcs::FindNodesCallback, this, args::_1, transport::Info(),
       protobuf::FindNodesResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " FIND_NODES to " << DebugId(peer);
@@ -357,10 +357,10 @@ void Rpcs<TransportType>::Store(const Key &key,
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_store_response()->connect(std::bind(
-      &Rpcs::StoreCallback, this, transport::kSuccess, arg::_1, arg::_2,
+      &Rpcs::StoreCallback, this, transport::kSuccess, args::_1, args::_2,
       object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::StoreCallback, this, arg::_1, transport::Info(),
+      &Rpcs::StoreCallback, this, args::_1, transport::Info(),
       protobuf::StoreResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " STORE to " << DebugId(peer);
@@ -393,10 +393,10 @@ void Rpcs<TransportType>::StoreRefresh(
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_store_refresh_response()->connect(std::bind(
-      &Rpcs::StoreRefreshCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
+      &Rpcs::StoreRefreshCallback, this, transport::kSuccess, args::_1,
+      args::_2, object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::StoreRefreshCallback, this, arg::_1, transport::Info(),
+      &Rpcs::StoreRefreshCallback, this, args::_1, transport::Info(),
       protobuf::StoreRefreshResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " STORE_REFRESH to "
@@ -431,10 +431,10 @@ void Rpcs<TransportType>::Delete(const Key &key,
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_delete_response()->connect(std::bind(
-      &Rpcs::DeleteCallback, this, transport::kSuccess, arg::_1, arg::_2,
+      &Rpcs::DeleteCallback, this, transport::kSuccess, args::_1, args::_2,
       object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::DeleteCallback, this, arg::_1, transport::Info(),
+      &Rpcs::DeleteCallback, this, args::_1, transport::Info(),
       protobuf::DeleteResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE to " << DebugId(peer);
@@ -467,10 +467,10 @@ void Rpcs<TransportType>::DeleteRefresh(
       message_handler->WrapMessage(request, peer.public_key());
   // Connect callback to message handler for incoming parsed response or error
   message_handler->on_delete_refresh_response()->connect(std::bind(
-      &Rpcs::DeleteRefreshCallback, this, transport::kSuccess, arg::_1, arg::_2,
-      object_indx, callback, message, rpcs_failure_peer));
+      &Rpcs::DeleteRefreshCallback, this, transport::kSuccess, args::_1,
+      args::_2, object_indx, callback, message, rpcs_failure_peer));
   message_handler->on_error()->connect(std::bind(
-      &Rpcs::DeleteRefreshCallback, this, arg::_1, transport::Info(),
+      &Rpcs::DeleteRefreshCallback, this, args::_1, transport::Info(),
       protobuf::DeleteRefreshResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE_REFRESH to "

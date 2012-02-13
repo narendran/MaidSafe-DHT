@@ -45,7 +45,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     Please update the maidsafe-dht library.
 #endif
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 typedef maidsafe::rsa::PublicKey PublicKey;
 typedef maidsafe::rsa::Identity Identity;
@@ -207,7 +207,7 @@ inline OrderedContacts CreateOrderedContacts(const NodeId &target) {
       std::bind(static_cast<bool(*)(const Contact&,           // NOLINT (Fraser)
                                     const Contact&,
                                     const NodeId&)>(&CloserToTarget),
-                arg::_1, arg::_2, target));
+                args::_1, args::_2, target));
 }
 
 /** Creates an new set of Contacts ordered by closeness to target, initialised
@@ -220,7 +220,7 @@ OrderedContacts CreateOrderedContacts(InputIterator first,
       std::bind(static_cast<bool(*)(const Contact&,           // NOLINT (Fraser)
                                     const Contact&,
                                     const NodeId&)>(&CloserToTarget),
-                arg::_1, arg::_2, target));
+                args::_1, args::_2, target));
 }
 
 

@@ -48,7 +48,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/node_id.h"
 #include "maidsafe/dht/node-api.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 namespace fs = boost::filesystem;
 
 namespace maidsafe {
@@ -130,7 +130,7 @@ void Commands::Store(const Arguments &args, bool read_from_file) {
     key = Key(crypto::Hash<crypto::SHA512>(args[0]));
 
   demo_node_->node()->Store(key, value, "", ttl, null_priv_key_,
-      std::bind(&Commands::StoreCallback, this, arg::_1, key, ttl));
+      std::bind(&Commands::StoreCallback, this, args::_1, key, ttl));
 }
 
 void Commands::StoreCallback(const int &result,
@@ -166,7 +166,7 @@ void Commands::FindValue(const Arguments &args, bool write_to_file) {
     key = Key(crypto::Hash<crypto::SHA512>(args[0]));
 
   demo_node_->node()->FindValue(key, null_priv_key_,
-      std::bind(&Commands::FindValueCallback, this, arg::_1, path));
+      std::bind(&Commands::FindValueCallback, this, args::_1, path));
 }
 
 void Commands::FindValueCallback(FindValueReturns find_value_returns,
@@ -208,7 +208,7 @@ void Commands::GetContact(const Arguments &args) {
   }
 
   demo_node_->node()->GetContact(node_id,
-      std::bind(&Commands::GetContactsCallback, this, arg::_1, arg::_2));
+      std::bind(&Commands::GetContactsCallback, this, args::_1, args::_2));
 }
 
 void Commands::GetContactsCallback(const int &result, Contact contact) {
@@ -243,7 +243,7 @@ void Commands::FindNodes(const Arguments &args, bool write_to_file) {
   }
 
   demo_node_->node()->FindNodes(node_id,
-      std::bind(&Commands::FindNodesCallback, this, arg::_1, arg::_2, path));
+      std::bind(&Commands::FindNodesCallback, this, args::_1, args::_2, path));
 }
 
 void Commands::FindNodesCallback(const int &result,
@@ -287,7 +287,7 @@ void Commands::Store50Values(const Arguments &args) {
 
     bptime::time_duration ttl(boost::posix_time::pos_infin);
     demo_node_->node()->Store(key, value, "", ttl, null_priv_key_,
-        std::bind(&Commands::Store50Callback, this, arg::_1, key_str,
+        std::bind(&Commands::Store50Callback, this, args::_1, key_str,
                   &returned_count));
   }
   {

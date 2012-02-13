@@ -41,7 +41,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "maidsafe/dht/node_id.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -132,7 +132,7 @@ void SortContacts(const NodeId &target_key, std::vector<Contact> *contacts) {
       std::bind(static_cast<bool(*)(const Contact&,  // NOLINT
                                     const Contact&,
                                     const NodeId&)>(&CloserToTarget),
-                arg::_1, arg::_2, target_key));
+                args::_1, args::_2, target_key));
 }
 
 void StubContactValidationGetter(

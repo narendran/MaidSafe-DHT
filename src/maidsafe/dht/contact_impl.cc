@@ -40,7 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/common/utils.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -150,7 +150,7 @@ bool Contact::Impl::SetPreferredEndpoint(const transport::IP &ip) {
 
 bool Contact::Impl::MoveLocalEndpointToFirst(const transport::IP &ip) {
   auto it = std::find_if(local_endpoints_.begin(), local_endpoints_.end(),
-            std::bind(&Contact::Impl::IpMatchesEndpoint, this, ip, arg::_1));
+            std::bind(&Contact::Impl::IpMatchesEndpoint, this, ip, args::_1));
   if (it == local_endpoints_.end()) {
     return false;
   } else {

@@ -35,7 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/sender_task.h"
 #include "maidsafe/dht/tests/test_utils.h"
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -127,8 +127,8 @@ TEST_F(SenderTaskTest, BEH_AddTask) {
   KeyValueSignature kvs = MakeKVS(crypto_key_data, 1024, "", "");
   RequestAndSignature request_signature("message", "message_signature");
   TaskCallback task_cb = std::bind(&SenderTaskTest::TestTaskCallBack1, this,
-                                   arg::_1, "request", arg::_2, arg::_3,
-                                   "response", arg::_4, arg::_5);
+                                   args::_1, "request", args::_2, args::_3,
+                                   "response", args::_4, args::_5);
   bool is_new_id(true);
   // Invalid tasks
   EXPECT_FALSE(sender_task_->AddTask(KeyValueSignature("", "", ""), info_,
@@ -185,8 +185,8 @@ TEST_F(SenderTaskTest, BEH_AddTask) {
   // Adding new task with different callback
   {
     TaskCallback task_cb = std::bind(&SenderTaskTest::TestTaskCallBack2,
-                                     this, arg::_1, "request", arg::_2,
-                                     arg::_3, "response", arg::_4, arg::_5);
+                                     this, args::_1, "request", args::_2,
+                                     args::_3, "response", args::_4, args::_5);
     asymm::GenerateKeyPair(&  crypto_key_data);
     KeyValueSignature kvs = MakeKVS(crypto_key_data, 1024, "", "");
     EXPECT_TRUE(sender_task_->AddTask(kvs, info_, request_signature,
@@ -201,12 +201,12 @@ TEST_F(SenderTaskTest, FUNC_SenderTaskCallback) {
   asymm::Keys crypto_key_data;
   RequestAndSignature request_signature("message", "message_signature");
   TaskCallback task_cb_1 = std::bind(&SenderTaskTest::TestTaskCallBack1,
-                                     this, arg::_1, "request", arg::_2,
-                                     arg::_3, "response", arg::_4, arg::_5);
+                                     this, args::_1, "request", args::_2,
+                                     args::_3, "response", args::_4, args::_5);
   bool is_new_id(true);
   asymm::GetPublicKeyAndValidationCallback sender_task_cb_1 =
       std::bind(&SenderTask::SenderTaskCallback, sender_task_,
-                "public_key_id_1", arg::_1, arg::_2);
+                "public_key_id_1", args::_1, args::_2);
   // Invalid data
   asymm::GenerateKeyPair(&  crypto_key_data);
   KeyValueSignature kvs = MakeKVS(crypto_key_data, 1024, "", "");
@@ -242,11 +242,11 @@ TEST_F(SenderTaskTest, FUNC_SenderTaskCallbackMultiThreaded) {
   asymm::Keys crypto_key_data;
   RequestAndSignature request_signature("message", "message_signature");
   TaskCallback task_cb_1 = std::bind(&SenderTaskTest::TestTaskCallBack1,
-                                     this, arg::_1, "request", arg::_2,
-                                     arg::_3, "response", arg::_4, arg::_5);
+                                     this, args::_1, "request", args::_2,
+                                     args::_3, "response", args::_4, args::_5);
   TaskCallback task_cb_2 = std::bind(&SenderTaskTest::TestTaskCallBack2,
-                                     this, arg::_1, "request", arg::_2, arg::_3,
-                                     "response", arg::_4, arg::_5);
+                                     this, args::_1, "request", args::_2,
+                                     args::_3, "response", args::_4, args::_5);
   bool is_new_id(true);
   uint16_t i(0);
   // Tasks to be executed and removed

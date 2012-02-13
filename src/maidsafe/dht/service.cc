@@ -48,7 +48,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/log.h"
 
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -69,10 +69,11 @@ Service::Service(std::shared_ptr<RoutingTable> routing_table,
       sender_task_(new SenderTask),
       client_node_id_(NodeId().String()),
       contact_validation_getter_(std::bind(&StubContactValidationGetter,
-                                           arg::_1, arg::_2)),
-      contact_validator_(std::bind(&StubContactValidator, arg::_1, arg::_2,
-                                   arg::_3)),
-      validate_functor_(std::bind(&StubValidate, arg::_1, arg::_2, arg::_3)) {}
+                                           args::_1, args::_2)),
+      contact_validator_(std::bind(&StubContactValidator, args::_1, args::_2,
+                                   args::_3)),
+      validate_functor_(std::bind(&StubValidate, args::_1, args::_2,
+                                  args::_3)) {}
 
 Service::~Service() {}
 
@@ -252,8 +253,8 @@ void Service::Store(const transport::Info &info,
   }
 
   RequestAndSignature request_signature(message, message_signature);
-  TaskCallback store_cb = std::bind(&Service::StoreCallback, this, arg::_1,
-                              request, arg::_2, arg::_3, arg::_4, arg::_5);
+  TaskCallback store_cb = std::bind(&Service::StoreCallback, this, args::_1,
+                              request, args::_2, args::_3, args::_4, args::_5);
   bool is_new_id = true;
   if (sender_task_->AddTask(key_value_signature, info, request_signature,
                             request.sender().public_key_id(), store_cb,
@@ -261,7 +262,8 @@ void Service::Store(const transport::Info &info,
     if (is_new_id) {  // If public_key_id is new
       asymm::Identity id(request.sender().public_key_id());
       asymm::GetPublicKeyAndValidationCallback callback(std::bind(
-          &SenderTask::SenderTaskCallback, sender_task_, id, arg::_1, arg::_2));
+          &SenderTask::SenderTaskCallback, sender_task_, id, args::_1,
+          args::_2));
       contact_validation_getter_(id, callback);
     }
     response->set_result(true);
@@ -310,8 +312,8 @@ void Service::StoreRefresh(const transport::Info &info,
   RequestAndSignature request_signature(request.serialised_store_request(),
                           request.serialised_store_request_signature());
   TaskCallback store_refresh_cb = std::bind(&Service::StoreRefreshCallback,
-                                            this, arg::_1, request, arg::_2,
-                                            arg::_3, arg::_4, arg::_5);
+                                            this, args::_1, request, args::_2,
+                                            args::_3, args::_4, args::_5);
   bool is_new_id = true;
   if (sender_task_->AddTask(key_value_signature, info, request_signature,
                             ori_store_request.sender().public_key_id(),
@@ -319,8 +321,8 @@ void Service::StoreRefresh(const transport::Info &info,
     if (is_new_id) {
       asymm::GetPublicKeyAndValidationCallback callback(
           std::bind(&SenderTask::SenderTaskCallback, sender_task_,
-                    ori_store_request.sender().public_key_id(), arg::_1,
-                    arg::_2));
+                    ori_store_request.sender().public_key_id(), args::_1,
+                    args::_2));
       contact_validation_getter_(ori_store_request.sender().public_key_id(),
                                  callback);
     }
@@ -431,9 +433,9 @@ void Service::Delete(const transport::Info &info,
   }
 
   RequestAndSignature request_signature(message, message_signature);
-  TaskCallback delete_cb = std::bind(&Service::DeleteCallback, this, arg::_1,
-                                     request, arg::_2, arg::_3, arg::_4,
-                                     arg::_5);
+  TaskCallback delete_cb = std::bind(&Service::DeleteCallback, this, args::_1,
+                                     request, args::_2, args::_3, args::_4,
+                                     args::_5);
   bool is_new_id = true;
   if (sender_task_->AddTask(key_value_signature, info, request_signature,
                             request.sender().public_key_id(), delete_cb,
@@ -441,7 +443,7 @@ void Service::Delete(const transport::Info &info,
     if (is_new_id) {
       asymm::GetPublicKeyAndValidationCallback callback(
           std::bind(&SenderTask::SenderTaskCallback, sender_task_,
-                    request.sender().public_key_id(), arg::_1, arg::_2));
+                    request.sender().public_key_id(), args::_1, args::_2));
       contact_validation_getter_(request.sender().public_key_id(), callback);
     }
     response->set_result(true);
@@ -492,8 +494,8 @@ void Service::DeleteRefresh(const transport::Info &info,
   RequestAndSignature request_signature(request.serialised_delete_request(),
                           request.serialised_delete_request_signature());
   TaskCallback delete_refresh_cb = std::bind(&Service::DeleteRefreshCallback,
-                                             this, arg::_1, request, arg::_2,
-                                             arg::_3, arg::_4, arg::_5);
+                                             this, args::_1, request, args::_2,
+                                             args::_3, args::_4, args::_5);
   bool is_new_id = true;
   if (sender_task_->AddTask(key_value_signature, info, request_signature,
                             ori_delete_request.sender().public_key_id(),
@@ -501,8 +503,8 @@ void Service::DeleteRefresh(const transport::Info &info,
     if (is_new_id) {
       asymm::GetPublicKeyAndValidationCallback callback(
           std::bind(&SenderTask::SenderTaskCallback, sender_task_,
-                    ori_delete_request.sender().public_key_id(), arg::_1,
-                    arg::_2));
+                    ori_delete_request.sender().public_key_id(), args::_1,
+                    args::_2));
       contact_validation_getter_(ori_delete_request.sender().public_key_id(),
                                  callback);
     }

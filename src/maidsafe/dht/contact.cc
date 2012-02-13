@@ -156,7 +156,7 @@ bool NodeWithinClosest(const NodeId &node_id,
       std::bind(static_cast<bool(*)(const NodeId&,  // NOLINT
                                     const Contact&,
                                     const NodeId&)>(&CloserToTarget),
-                node_id, arg::_1, target)) != closest_contacts.rend();
+                node_id, args::_1, target)) != closest_contacts.rend();
 }
 
 bool RemoveContact(const NodeId &node_id, std::vector<Contact> *contacts) {
@@ -164,7 +164,7 @@ bool RemoveContact(const NodeId &node_id, std::vector<Contact> *contacts) {
     return false;
   size_t size_before(contacts->size());
   contacts->erase(std::remove_if(contacts->begin(), contacts->end(),
-                                 std::bind(&HasId, arg::_1, node_id)),
+                                 std::bind(&HasId, args::_1, node_id)),
                   contacts->end());
   return contacts->size() != size_before;
 }

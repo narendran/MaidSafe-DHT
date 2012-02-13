@@ -42,7 +42,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/node_id.h"
 
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 namespace dht {
@@ -413,10 +413,10 @@ TEST_F(MockRpcsTest, BEH_Ping) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
-    RpcPingFunctor pf = std::bind(&MockRpcsTest::Callback, this, arg::_1,
-                                  arg::_2, &b, &m, &result);
+    RpcPingFunctor pf = std::bind(&MockRpcsTest::Callback, this, args::_1,
+                                  args::_2, &b, &m, &result);
     rpcs->Ping(private_key_, peer_, pf);
     while (!b2) {
       Sleep(boost::posix_time::milliseconds(10));
@@ -473,10 +473,10 @@ TEST_F(MockRpcsTest, BEH_Store) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
-    RpcStoreFunctor sf = std::bind(&MockRpcsTest::Callback, this, arg::_1,
-                                   arg::_2, &b, &m, &result);
+    RpcStoreFunctor sf = std::bind(&MockRpcsTest::Callback, this, args::_1,
+                                   args::_2, &b, &m, &result);
     rpcs->Store(NodeId(NodeId::kRandomId), "", "",
                 boost::posix_time::seconds(1), private_key_, peer_, sf);
     while (!b2) {
@@ -534,10 +534,10 @@ TEST_F(MockRpcsTest, BEH_StoreRefresh) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
     RpcStoreRefreshFunctor srf = std::bind(&MockRpcsTest::Callback, this,
-                                           arg::_1, arg::_2, &b, &m, &result);
+                                           args::_1, args::_2, &b, &m, &result);
     rpcs->StoreRefresh("", "", private_key_, peer_, srf);
     while (!b2) {
       Sleep(boost::posix_time::milliseconds(10));
@@ -592,10 +592,10 @@ TEST_F(MockRpcsTest, BEH_Delete) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
-    RpcDeleteFunctor df = std::bind(&MockRpcsTest::Callback, this, arg::_1,
-                                    arg::_2, &b, &m, &result);
+    RpcDeleteFunctor df = std::bind(&MockRpcsTest::Callback, this, args::_1,
+                                    args::_2, &b, &m, &result);
     rpcs->Delete(NodeId(NodeId::kRandomId), "", "", private_key_, peer_, df);
     while (!b2) {
       Sleep(boost::posix_time::milliseconds(10));
@@ -650,10 +650,11 @@ TEST_F(MockRpcsTest, BEH_DeleteRefresh) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
     RpcDeleteRefreshFunctor drf = std::bind(&MockRpcsTest::Callback, this,
-                                            arg::_1, arg::_2, &b, &m, &result);
+                                            args::_1, args::_2, &b, &m,
+                                            &result);
     rpcs->DeleteRefresh("", "", private_key_, peer_, drf);
     while (!b2) {
       Sleep(boost::posix_time::milliseconds(10));
@@ -708,10 +709,10 @@ TEST_F(MockRpcsTest, BEH_FindNodes) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
     RpcFindNodesFunctor fnf = std::bind(&MockRpcsTest::FindNodesCallback, this,
-                                        arg::_1, arg::_2, arg::_3, &b, &m,
+                                        args::_1, args::_2, args::_3, &b, &m,
                                         &result);
 
     rpcs->FindNodes(NodeId(NodeId::kRandomId), 1, private_key_, peer_, fnf);
@@ -768,11 +769,11 @@ TEST_F(MockRpcsTest, BEH_FindValue) {
     EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
         .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
             std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                      rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                      rpcs.get(), args::_1, args::_2, args::_3))));
 
     RpcFindValueFunctor fvf = std::bind(&MockRpcsTest::FindValueCallback, this,
-                                        arg::_1, arg::_2, arg::_3, arg::_4,
-                                        arg::_5, &b, &m, &result);
+                                        args::_1, args::_2, args::_3, args::_4,
+                                        args::_5, &b, &m, &result);
 
     rpcs->FindValue(NodeId(NodeId::kRandomId), 1, private_key_, peer_, fvf);
     while (!b2) {
@@ -827,7 +828,7 @@ TEST_F(MockRpcsTest, BEH_Downlist) {
   EXPECT_CALL(*rpcs, Prepare(testing::_, testing::_, testing::_))
       .WillOnce(testing::WithArgs<0, 1, 2>(testing::Invoke(
           std::bind(&MockRpcs<transport::TcpTransport>::MockPrepare,
-                    rpcs.get(), arg::_1, arg::_2, arg::_3))));
+                    rpcs.get(), args::_1, args::_2, args::_3))));
 
   rpcs->Downlist(node_ids, private_key_, peer_);
   while (!MockMessageHandler::ops_completion_flag) {

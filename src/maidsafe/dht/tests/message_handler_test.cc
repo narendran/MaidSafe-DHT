@@ -48,7 +48,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  pragma warning(pop)
 #endif
 
-namespace arg = std::placeholders;
+namespace args = std::placeholders;
 
 namespace maidsafe {
 
@@ -270,49 +270,50 @@ class KademliaMessageHandlerTest: public testing::Test {
 
   void ConnectToHandlerSignals() {
     msg_hndlr_->on_ping_request()->connect(std::bind(
-        &KademliaMessageHandlerTest::PingRequestSlot, this, arg::_1, arg::_2,
-        arg::_3, arg::_4));
+        &KademliaMessageHandlerTest::PingRequestSlot, this, args::_1, args::_2,
+        args::_3, args::_4));
     msg_hndlr_->on_ping_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::PingResponseSlot, this, arg::_1, arg::_2));
+        &KademliaMessageHandlerTest::PingResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_find_value_request()->connect(std::bind(
         &KademliaMessageHandlerTest::FindValueRequestSlot,
-        this, arg::_1, arg::_2, arg::_3, arg::_4));
+        this, args::_1, args::_2, args::_3, args::_4));
     msg_hndlr_->on_find_value_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::FindValueResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::FindValueResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_find_nodes_request()->connect(std::bind(
         &KademliaMessageHandlerTest::FindNodesRequestSlot,
-        this, arg::_1, arg::_2, arg::_3, arg::_4));
+        this, args::_1, args::_2, args::_3, args::_4));
     msg_hndlr_->on_find_nodes_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::FindNodesResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::FindNodesResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_store_request()->connect(std::bind(
         &KademliaMessageHandlerTest::StoreRequestSlot, this,
-        arg::_1, arg::_2, arg::_3, arg::_4, arg::_5, arg::_6));
+        args::_1, args::_2, args::_3, args::_4, args::_5, args::_6));
     msg_hndlr_->on_store_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::StoreResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::StoreResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_store_refresh_request()->connect(std::bind(
         &KademliaMessageHandlerTest::StoreRefreshRequestSlot,
-        this, arg::_1, arg::_2, arg::_3, arg::_4));
+        this, args::_1, args::_2, args::_3, args::_4));
     msg_hndlr_->on_store_refresh_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::StoreRefreshResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::StoreRefreshResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_delete_request()->connect(std::bind(
         &KademliaMessageHandlerTest::DeleteRequestSlot, this,
-        arg::_1, arg::_2, arg::_3, arg::_4, arg::_5, arg::_6));
+        args::_1, args::_2, args::_3, args::_4, args::_5, args::_6));
     msg_hndlr_->on_delete_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::DeleteResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::DeleteResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_delete_refresh_request()->connect(std::bind(
         &KademliaMessageHandlerTest::DeleteRefreshRequestSlot,
-        this, arg::_1, arg::_2, arg::_3, arg::_4));
+        this, args::_1, args::_2, args::_3, args::_4));
     msg_hndlr_->on_delete_refresh_response()->connect(std::bind(
-        &KademliaMessageHandlerTest::DeleteRefreshResponseSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::DeleteRefreshResponseSlot, this, args::_1,
+        args::_2));
     msg_hndlr_->on_downlist_notification()->connect(std::bind(
-        &KademliaMessageHandlerTest::DownlistNotificationSlot, this, arg::_1,
-        arg::_2));
+        &KademliaMessageHandlerTest::DownlistNotificationSlot, this, args::_1,
+        args::_2));
   }
 
   std::vector<std::string> CreateMessages() {
