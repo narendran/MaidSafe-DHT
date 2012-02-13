@@ -54,9 +54,9 @@ Contact::Impl::Impl()
       tcp443_(false),
       tcp80_(false),
       prefer_local_(false),
-      public_key_id_(),
+      other_info_(),
       public_key_(),
-      other_info_() {}
+      public_key_id_() {}
 
 Contact::Impl::Impl(const Contact &other)
     : node_id_(other.pimpl_->node_id_),
@@ -66,9 +66,9 @@ Contact::Impl::Impl(const Contact &other)
       tcp443_(other.pimpl_->tcp443_),
       tcp80_(other.pimpl_->tcp80_),
       prefer_local_(other.pimpl_->prefer_local_),
-      public_key_id_(other.pimpl_->public_key_id_),
+      other_info_(other.pimpl_->other_info_),
       public_key_(other.pimpl_->public_key_),
-      other_info_(other.pimpl_->other_info_) {}
+      public_key_id_(other.pimpl_->public_key_id_) {}
 
 Contact::Impl::Impl(const NodeId &node_id,
                     const transport::Endpoint &endpoint,
@@ -86,9 +86,9 @@ Contact::Impl::Impl(const NodeId &node_id,
       tcp443_(tcp443),
       tcp80_(tcp80),
       prefer_local_(false),
-      public_key_id_(public_key_id),
+      other_info_(other_info),
       public_key_(public_key),
-      other_info_(other_info) {
+      public_key_id_(public_key_id) {
   Init();
 }
 
