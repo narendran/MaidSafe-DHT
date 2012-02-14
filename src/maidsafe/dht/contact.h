@@ -280,7 +280,7 @@ void serialize(Archive &archive,                              // NOLINT (Fraser)
   if (Archive::is_loading::value) {
     public_key_id = maidsafe::DecodeFromBase32(public_key_id);
     public_key = maidsafe::DecodeFromBase32(public_key);
-    PublicKey asym_public_key;
+    maidsafe::rsa::PublicKey asym_public_key;
     maidsafe::asymm::DecodePublicKey(public_key, &asym_public_key);
     contact = mk::Contact(node_id, endpoint, local_endpoints,
                           rendezvous_endpoint, tcp443, tcp80, public_key_id,
