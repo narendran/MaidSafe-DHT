@@ -1591,7 +1591,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
         handler_() {
     for (int index = 0; index < g_kRpcClientNo; ++index) {
       asio_services_.push_back(std::shared_ptr<AsioService>(new AsioService));
-      (*asio_services_.rend())->Start(1);
+      (*asio_services_.rbegin())->Start(1);
     }
     const int kMinServerPositionOffset(kKeySizeBits - g_kRpcServersNo);
     for (int index = 0; index != g_kRpcServersNo; ++index) {
@@ -1604,7 +1604,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
       AlternativeStorePtr alternative_store;
       alternative_store_.push_back(alternative_store);
       local_asios_.push_back(std::shared_ptr<AsioService>(new AsioService));
-      (*local_asios_.rend())->Start(1);
+      (*local_asios_.rbegin())->Start(1);
     }
     dispatcher_.Start(1);
   }
