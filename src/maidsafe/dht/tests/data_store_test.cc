@@ -45,6 +45,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #  pragma warning(pop)
 #endif
 
+#include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/platform_config.h"
 #include "maidsafe/common/crypto.h"
@@ -603,7 +604,7 @@ TEST_F(DataStoreTest, BEH_GetValues) {
   // Test on empty data_store
   std::vector<std::pair<std::string, std::string>> values;
   values.push_back(std::make_pair("a", "b"));
-  EXPECT_FALSE(data_store_->GetValues(common_key, NULL));
+  EXPECT_FALSE(data_store_->GetValues(common_key, nullptr));
   EXPECT_FALSE(data_store_->GetValues("", &values));
   EXPECT_TRUE(values.empty());
   values.push_back(std::make_pair("a", "b"));
@@ -729,7 +730,7 @@ TEST_F(DataStoreTest, FUNC_Refresh) {
   }
   // Test on empty data_store
   returned_kvts.push_back(MakeKVT(crypto_keys, 1, two_seconds, "", ""));
-  data_store_->Refresh(NULL);
+  data_store_->Refresh(nullptr);
   data_store_->Refresh(&returned_kvts);
   ASSERT_TRUE(returned_kvts.empty());
   returned_kvts.push_back(MakeKVT(crypto_keys, 1024, two_seconds, "", ""));
@@ -825,7 +826,6 @@ TEST_F(DataStoreTest, FUNC_MultipleThreads) {
   const size_t kThreadCount(10), kSigners(5), kEntriesPerSigner(55);
   const size_t kValuesPerEntry(4);
 
-  AsioService asio_service;
   for (size_t i = 0; i != kSigners; ++i) {
     crypto_keys_.push_back(asymm::Keys());
     asymm::GenerateKeyPair(&crypto_keys_.at(i));
@@ -923,31 +923,27 @@ TEST_F(DataStoreTest, FUNC_MultipleThreads) {
       ((bool_functors.size() + int_functors.size()) / kValuesPerEntry) + 1,
       std::vector<KeyValueTuple>());
   int count(0);
+  AsioService asio_service;
   for (auto it = bool_functors.begin(); it != bool_functors.end();
       ++it, ++count) {
-    asio_service.post(*it);
+    asio_service.service().post(*it);
     if ((count % kValuesPerEntry) == 0) {
-      asio_service.post(std::bind(&DataStore::Refresh, data_store_,
+      asio_service.service().post(std::bind(&DataStore::Refresh, data_store_,
           &returned_kvts.at(count / kValuesPerEntry)));
     }
   }
   for (auto it = int_functors.begin(); it != int_functors.end();
       ++it, ++count) {
-    asio_service.post(*it);
+    asio_service.service().post(*it);
     if ((count % kValuesPerEntry) == 0) {
-      asio_service.post(std::bind(&DataStore::Refresh, data_store_,
+      asio_service.service().post(std::bind(&DataStore::Refresh, data_store_,
           &returned_kvts.at(count / kValuesPerEntry)));
     }
   }
 
   // Run threads
-  boost::thread_group asio_thread_group;
-  for (size_t i = 0; i != kThreadCount; ++i) {
-    asio_thread_group.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &asio_service));
-  }
-  asio_thread_group.join_all();
+  asio_service.Start(kThreadCount);
+  asio_service.Stop();
 
   // Check results
   for (auto it = stored_then_deleted_kvts.begin();

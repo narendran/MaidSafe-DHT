@@ -187,19 +187,19 @@ void validate(boost::any& v, const std::vector<std::string>& values,
 }
 
 int main(int argc, char **argv) {
-  google::InitGoogleLogging(argv[0]);
+  maidsafe::InitLogging(argv[0]);
   fs::path cur_path = fs::initial_path();
   maidsafe::crash_report::ProjectInfo current_project("MaidSafe-DHT",
                         boost::lexical_cast<std::string>(MAIDSAFE_DHT_VERSION));
 #ifdef WIN32
   google_breakpad::ExceptionHandler exception_handler(cur_path.wstring(),
-                                        NULL,
+                                        nullptr,
                                         maidsafe::crash_report::DumpCallback,
                                         &current_project,
                                         true);
 #else
   google_breakpad::ExceptionHandler exception_handler(cur_path.string(),
-                                        NULL,
+                                        nullptr,
                                         maidsafe::crash_report::DumpCallback,
                                         &current_project,
                                         true);
@@ -372,7 +372,7 @@ int main(int argc, char **argv) {
     if (result != mk::kSuccess) {
       ULOG(ERROR) << "Node failed to join the network with return code "
                   << result;
-      demo_node->Stop(NULL);
+      demo_node->Stop(nullptr);
       return result;
     }
 

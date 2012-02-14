@@ -369,7 +369,7 @@ TEST_P(NodeImplTest, FUNC_FindNodes) {
   // verify a node which has left isn't included in the returned list
   {
     boost::mutex::scoped_lock lock(env_->mutex_);
-    test_container_->Stop(NULL);
+    test_container_->Stop(nullptr);
     for (size_t i = 0; i < env_->num_full_nodes_; i++) {
       closest_nodes.clear();
       env_->node_containers_[i]->FindNodes(
@@ -1298,7 +1298,7 @@ TEST_P(NodeImplTest, FUNC_StoreRefresh) {
   auto id_itr = std::find(env_->node_ids_.begin(), env_->node_ids_.end(),
                           (*node_to_leave)->node()->contact().node_id());
   ASSERT_NE(env_->node_ids_.end(), id_itr);
-  (*node_to_leave)->node()->Leave(NULL);
+  (*node_to_leave)->node()->Leave(nullptr);
 
   const_cast<bptime::seconds&>(GetDataStore(*refresh_node)->kRefreshInterval_) =
       bptime::seconds(3600);
@@ -1391,7 +1391,7 @@ TEST_P(NodeImplTest, FUNC_StoreRefreshInvalidSigner) {
   auto id_itr = std::find(env_->node_ids_.begin(), env_->node_ids_.end(),
                           (*node_to_leave)->node()->contact().node_id());
   ASSERT_NE(env_->node_ids_.end(), id_itr);
-  (*node_to_leave)->node()->Leave(NULL);
+  (*node_to_leave)->node()->Leave(nullptr);
 
   const_cast<bptime::seconds&>(data_store->kRefreshInterval_) =
       bptime::seconds(3600);
@@ -1485,7 +1485,7 @@ TEST_P(NodeImplTest, FUNC_DeleteRefresh) {
   auto id_itr = std::find(env_->node_ids_.begin(), env_->node_ids_.end(),
                           (*node_to_leave)->node()->contact().node_id());
   ASSERT_NE(env_->node_ids_.end(), id_itr);
-  (*node_to_leave)->node()->Leave(NULL);
+  (*node_to_leave)->node()->Leave(nullptr);
   const_cast<bptime::seconds&>(GetDataStore(*refresh_node)->kRefreshInterval_) =
       bptime::seconds(3600);
 

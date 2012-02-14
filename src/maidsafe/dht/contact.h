@@ -29,14 +29,19 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAIDSAFE_DHT_CONTACT_H_
 
 #include <functional>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include "boost/scoped_ptr.hpp"
+
 #include "boost/serialization/nvp.hpp"
 #include "boost/serialization/vector.hpp"
+
+#include "maidsafe/common/rsa.h"
 #include "maidsafe/common/utils.h"
+
 #include "maidsafe/transport/transport.h"
+
 #include "maidsafe/dht/node_id.h"
 #include "maidsafe/dht/version.h"
 
@@ -47,8 +52,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace args = std::placeholders;
 
-typedef maidsafe::rsa::PublicKey PublicKey;
-typedef maidsafe::rsa::Identity Identity;
 
 namespace maidsafe {
 
@@ -88,8 +91,8 @@ class Contact {
           const transport::Endpoint &rendezvous_endpoint,
           bool tcp443,
           bool tcp80,
-          const Identity &public_key_id,
-          const PublicKey &public_key,
+          const asymm::Identity &public_key_id,
+          const asymm::PublicKey &public_key,
           const std::string &other_info);
 
   /** Destructor. */
@@ -122,12 +125,12 @@ class Contact {
   /** Getter.
    *  @return ID of the public key which should be used to encrypt messages for
    *          this contact. */
-  Identity public_key_id() const;
+  asymm::Identity public_key_id() const;
 
   /** Getter.
    *  @return Public key which should be used to encrypt messages for this
    *          contact. */
-  PublicKey public_key() const;
+  asymm::PublicKey public_key() const;
 
   /** Getter.
    *  @return Any extra information held for this contact. */
@@ -171,7 +174,7 @@ class Contact {
 
  private:
   class Impl;
-  boost::scoped_ptr<Impl> pimpl_;
+  std::unique_ptr<Impl> pimpl_;
 };
 
 
@@ -278,7 +281,7 @@ void serialize(Archive &archive,                              // NOLINT (Fraser)
     public_key_id = maidsafe::DecodeFromBase32(public_key_id);
     public_key = maidsafe::DecodeFromBase32(public_key);
     PublicKey asym_public_key;
-    maidsafe::rsa::DecodePublicKey(public_key, &asym_public_key);
+    maidsafe::asymm::DecodePublicKey(public_key, &asym_public_key);
     contact = mk::Contact(node_id, endpoint, local_endpoints,
                           rendezvous_endpoint, tcp443, tcp80, public_key_id,
                           asym_public_key, other_info);

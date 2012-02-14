@@ -123,7 +123,7 @@ bool Service::CheckParameters(const std::string &method_name,
     return false;
   }
   if (!private_key_) {
-    DLOG(WARNING) << debug_msg << ": NULL private_key.";
+    DLOG(WARNING) << debug_msg << ": nullptr private_key.";
     return false;
   }
   if (key && !key->IsValid()) {
@@ -146,7 +146,7 @@ void Service::Ping(const transport::Info &info,
                    protobuf::PingResponse *response,
                    transport::Timeout*) {
   response->set_echo("");
-  if (!CheckParameters("Ping", NULL, &request.ping()))
+  if (!CheckParameters("Ping", nullptr, &request.ping()))
     return;
   response->set_echo(request.ping());
   DLOG(INFO) << "\t" << DebugId(node_contact_) << " PING from "
@@ -277,7 +277,7 @@ void Service::StoreRefresh(const transport::Info &info,
                            protobuf::StoreRefreshResponse *response,
                            transport::Timeout*) {
   response->set_result(false);
-  if (!CheckParameters("StoreRefresh", NULL,
+  if (!CheckParameters("StoreRefresh", nullptr,
                        &request.serialised_store_request(),
                        &request.serialised_store_request_signature()))
     return;
@@ -457,7 +457,7 @@ void Service::DeleteRefresh(const transport::Info &info,
                             protobuf::DeleteRefreshResponse *response,
                             transport::Timeout*) {
   response->set_result(false);
-  if (!CheckParameters("DeleteRefresh", NULL,
+  if (!CheckParameters("DeleteRefresh", nullptr,
                        &request.serialised_delete_request(),
                        &request.serialised_delete_request_signature()))
     return;

@@ -33,7 +33,7 @@ namespace maidsafe {
 
 namespace dht {
 
-Node::Node(AsioService &asio_service,             // NOLINT (Fraser)
+Node::Node(boost::asio::io_service &asio_service,             // NOLINT (Fraser)
            TransportPtr listening_transport,
            MessageHandlerPtr message_handler,
            KeyPairPtr default_key_pair,

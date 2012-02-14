@@ -30,6 +30,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
 #include <vector>
+#include "maidsafe/common/rsa.h"
 #include "maidsafe/transport/transport.h"
 #include "maidsafe/dht/contact.h"
 #include "maidsafe/dht/node_id.h"
@@ -48,8 +49,8 @@ class Contact::Impl {
        const transport::Endpoint &rendezvous_endpoint,
        bool tcp443,
        bool tcp80,
-       const Identity &public_key_id,
-       const PublicKey &public_key,
+       const asymm::Identity &public_key_id,
+       const asymm::PublicKey &public_key,
        const std::string &other_info);
   NodeId node_id() const { return node_id_; }
   transport::Endpoint endpoint() const { return endpoint_; }
@@ -61,8 +62,8 @@ class Contact::Impl {
   }
   transport::Endpoint tcp443endpoint() const;
   transport::Endpoint tcp80endpoint() const;
-  Identity public_key_id() const { return public_key_id_; }
-  PublicKey public_key() const { return public_key_; }
+  asymm::Identity public_key_id() const { return public_key_id_; }
+  asymm::PublicKey public_key() const { return public_key_; }
   std::string other_info() const { return other_info_; }
   bool SetPreferredEndpoint(const transport::IP &ip);
   transport::Endpoint PreferredEndpoint() const;
@@ -87,8 +88,8 @@ class Contact::Impl {
   transport::Endpoint rendezvous_endpoint_;
   bool tcp443_, tcp80_, prefer_local_;
   std::string other_info_;
-  PublicKey public_key_;
-  Identity public_key_id_;
+  asymm::PublicKey public_key_;
+  asymm::Identity public_key_id_;
 };
 
 }  // namespace dht

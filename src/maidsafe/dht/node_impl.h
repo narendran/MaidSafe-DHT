@@ -79,7 +79,7 @@ typedef std::function<void(RankInfoPtr, const int&)> StoreRefreshFunctor;
 
 class NodeImpl {
  public:
-  NodeImpl(AsioService &asio_service,                         // NOLINT (Fraser)
+  NodeImpl(boost::asio::io_service &asio_service,             // NOLINT (Fraser)
            TransportPtr listening_transport,
            MessageHandlerPtr message_handler,
            KeyPairPtr default_asym_key_pair,
@@ -496,7 +496,7 @@ class NodeImpl {
                               RankInfoPtr rank_info,
                               const int &result);
 
-  AsioService &asio_service_;
+  boost::asio::io_service &asio_service_;
   TransportPtr listening_transport_;
   MessageHandlerPtr message_handler_;
   PublicKeyPtr default_public_key_;

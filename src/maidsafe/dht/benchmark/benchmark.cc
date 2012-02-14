@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
     } else {
       FLAGS_logtostderr = vm["verbose"].as<bool>();
     }
-    google::InitGoogleLogging(argv[0]);
+    maidsafe::InitLogging(argv[0]);
 
 /*
     // Starting transport on port

@@ -142,7 +142,7 @@ TEST_F(SenderTaskTest, BEH_AddTask) {
                                      &is_new_id));
   EXPECT_FALSE(HasDataInIndex(kvs, request_signature, ""));
   EXPECT_FALSE(sender_task_->AddTask(kvs, info_, request_signature,
-                                     "public_key_id_1", NULL, &is_new_id));
+                                     "public_key_id_1", nullptr, &is_new_id));
   EXPECT_FALSE(HasDataInIndex(kvs, request_signature, "public_key_id_1"));
   // Valid task
   EXPECT_TRUE(sender_task_->AddTask(kvs, info_, request_signature,

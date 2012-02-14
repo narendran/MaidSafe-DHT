@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/date_time/posix_time/posix_time_duration.hpp"
 #include "boost/thread.hpp"
 
+#include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/crypto.h"
 
 #include "maidsafe/transport/tcp_transport.h"
@@ -181,10 +182,10 @@ class NodeContainer {
   void GetAndResetGetContactResult(int *result, Contact *contact);
   void GetAndResetPingResult(int *result);
 
-  // This returns the asio_service_ by reference!  This is needed by almost any
+  // This returns the io_service by reference!  This is needed by almost any
   // asio object which takes an io_service in its constructor.  Ensure that if
   // this getter is used, this class instance outlives the caller.
-  AsioService &asio_service() { return asio_service_; }
+  boost::asio::io_service &asio_service() { return asio_service_.service(); }
 
   // Standard getters
   std::shared_ptr<NodeType> node() const { return node_; }
@@ -225,8 +226,6 @@ class NodeContainer {
 
  protected:
   AsioService asio_service_;
-  std::shared_ptr<boost::asio::io_service::work> work_;
-  boost::thread_group thread_group_;
   TransportPtr listening_transport_;
   MessageHandlerPtr message_handler_;
   KeyPairPtr key_pair_;
@@ -295,8 +294,6 @@ std::string DebugId(const NodeContainer<NodeType> &container) {
 template<typename NodeType>
 NodeContainer<NodeType>::NodeContainer()
     : asio_service_(),
-      work_(new boost::asio::io_service::work(asio_service_)),
-      thread_group_(),
       listening_transport_(),
       message_handler_(),
       key_pair_(),
@@ -351,7 +348,7 @@ NodeContainer<NodeType>::NodeContainer()
 
 template<typename NodeType>
 NodeContainer<NodeType>::~NodeContainer() {
-  Stop(NULL);
+  Stop(nullptr);
 }
 
 template <typename NodeType>
@@ -366,11 +363,7 @@ void NodeContainer<NodeType>::Init(
     uint16_t beta,
     bptime::time_duration mean_refresh_interval) {
   // Create worker threads for asynchronous operations.
-  for (uint8_t i = 0; i != thread_count; ++i) {
-    thread_group_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), std::ref(asio_service_)));
-  }
+  asio_service_.Start(thread_count);
 
   // Set up private_key if it wasn't passed in - make signing_key_id compatible
   // with type NodeId so that the node's ID can be set as the public key's ID
@@ -394,7 +387,8 @@ void NodeContainer<NodeType>::Init(
   // incoming raw messages.  Don't need to connect to on_error() as service
   // doesn't care if reply succeeds or not.
   if (!client_only_node) {
-    listening_transport_.reset(new transport::TcpTransport(asio_service_));
+    listening_transport_.reset(
+        new transport::TcpTransport(asio_service_.service()));
     listening_transport_->on_message_received()->connect(
         transport::OnMessageReceived::element_type::slot_type(
             &MessageHandler::OnMessageReceived, message_handler_.get(),
@@ -406,7 +400,7 @@ void NodeContainer<NodeType>::Init(
   }
 
   // Create node
-  node_.reset(new NodeType(asio_service_, listening_transport_,
+  node_.reset(new NodeType(asio_service_.service(), listening_transport_,
                            message_handler_, key_pair_, alternative_store,
                            client_only_node, k, alpha, beta,
                            mean_refresh_interval));
@@ -485,12 +479,12 @@ int NodeContainer<NodeType>::Stop(std::vector<Contact> *bootstrap_contacts) {
       if (bootstrap_contacts)
         *bootstrap_contacts = bootstrap_contacts_;
     }
-    work_.reset();
-    asio_service_.stop();
-    thread_group_.join_all();
   } catch(const std::exception&) {
     return kGeneralError;
   }
+  if (listening_transport_)
+    listening_transport_->StopListening();
+  asio_service_.Stop();
   return kSuccess;
 }
 

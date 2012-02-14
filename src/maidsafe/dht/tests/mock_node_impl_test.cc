@@ -39,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/test.h"
 
 #include "maidsafe/common/alternative_store.h"
+#include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/utils.h"
 #include "maidsafe/common/crypto.h"
 
@@ -622,16 +623,14 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
  protected:
   MockNodeImplTest()
       : CreateContactAndNodeId(g_kKademliaK),
+        asio_service_(),
         data_store_(),
         alternative_store_(),
         private_key_(new asymm::PrivateKey()),
         mock_transport_(new MockTransport),
         rank_info_(),
-        asio_service_(),
-        work_(new boost::asio::io_service::work(asio_service_)),
-        thread_group_(),
         message_handler_(new MessageHandler(private_key_)),
-        node_(new NodeImpl(asio_service_,
+        node_(new NodeImpl(asio_service_.service(),
                            mock_transport_,
                            message_handler_,
                            KeyPairPtr(new asymm::Keys()),
@@ -642,7 +641,7 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
                            g_kBeta,
                            bptime::seconds(3600))),
         threshold_((g_kKademliaK * 3) / 4),
-        local_node_(new NodeImpl(asio_service_,
+        local_node_(new NodeImpl(asio_service_.service(),
                                  mock_transport_,
                                  message_handler_,
                                  KeyPairPtr(new asymm::Keys()),
@@ -663,17 +662,11 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
   }
 
   void SetUp() {
-    for (int i(0); i != 3; ++i) {
-      thread_group_.create_thread(
-          std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-          &boost::asio::io_service::run), &asio_service_));
-    }
+    asio_service_.Start(3);
   }
 
   void TearDown() {
-    asio_service_.stop();
-    work_.reset();
-    thread_group_.join_all();
+    asio_service_.Stop();
   }
 
   void PopulateRoutingTable(uint16_t count, uint16_t pos) {
@@ -701,14 +694,12 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
     local_node_->rpcs_ = rpcs;
   }
 
+  AsioService asio_service_;
   std::shared_ptr<DataStore> data_store_;
   AlternativeStorePtr alternative_store_;
   PrivateKeyPtr private_key_;
   TransportPtr mock_transport_;
   RankInfoPtr rank_info_;
-  boost::asio::io_service asio_service_;
-  std::shared_ptr<boost::asio::io_service::work> work_;
-  boost::thread_group thread_group_;
   MessageHandlerPtr message_handler_;
   std::shared_ptr<NodeImpl> node_;
   int threshold_;
@@ -737,7 +728,8 @@ TEST_F(MockNodeImplTest, BEH_GetContact) {
   bool done(false);
   PopulateRoutingTable(g_kKademliaK, 500);
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -821,7 +813,8 @@ TEST_F(MockNodeImplTest, BEH_PingOldestContact) {
   PopulateRoutingTable(g_kKademliaK, 501);
 
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetLocalRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -869,7 +862,8 @@ TEST_F(MockNodeImplTest, BEH_Join) {
   node_->joined_ = false;
   std::vector<Contact> bootstrap_contacts;
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -918,7 +912,7 @@ TEST_F(MockNodeImplTest, BEH_Join) {
       EXPECT_TRUE(not_timed_out);
     }
     ASSERT_EQ(kSuccess, result);
-    node_->Leave(NULL);
+    node_->Leave(nullptr);
   }
   DLOG(INFO) << "Last contact was valid";
   // When first contact in bootstrap_contacts is valid
@@ -951,7 +945,7 @@ TEST_F(MockNodeImplTest, BEH_Join) {
       EXPECT_TRUE(not_timed_out);
     }
     ASSERT_EQ(kSuccess, result);
-    node_->Leave(NULL);
+    node_->Leave(nullptr);
   }
   Sleep(boost::posix_time::seconds(2));
   DLOG(INFO) << "First contact was valid";
@@ -992,7 +986,7 @@ TEST_F(MockNodeImplTest, BEH_Join) {
       EXPECT_TRUE(not_timed_out);
     }
     EXPECT_EQ(kContactFailedToRespond, result);
-    node_->Leave(NULL);
+    node_->Leave(nullptr);
   }
   DLOG(INFO) << "No valid contacts";
   // Test for refreshing data_store entry
@@ -1038,7 +1032,7 @@ TEST_F(MockNodeImplTest, BEH_Join) {
       EXPECT_TRUE(not_timed_out);
     }
     ASSERT_EQ(kSuccess, result);
-    node_->Leave(NULL);
+    node_->Leave(nullptr);
   }
   DLOG(INFO) << "Refreshing data store entry";
 }
@@ -1048,7 +1042,8 @@ TEST_F(MockNodeImplTest, BEH_Leave) {
   PopulateRoutingTable(g_kKademliaK, 500);
   std::vector<Contact> bootstrap_contacts;
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
   int count = 10 * g_kKademliaK;
@@ -1086,7 +1081,7 @@ TEST_F(MockNodeImplTest, BEH_Leave) {
     EXPECT_TRUE(not_timed_out);
   }
   ASSERT_EQ(kSuccess, result);
-  node_->Leave(NULL);
+  node_->Leave(nullptr);
   ASSERT_FALSE(node_->joined());
 //  ASSERT_EQ(size_t(0), node_->thread_group_.use_count());
 //  ASSERT_FALSE(node_->refresh_thread_running());
@@ -1099,7 +1094,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
   bool done(false);
   PopulateRoutingTable(g_kKademliaK * 2, 500);
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -1313,7 +1309,8 @@ TEST_F(MockNodeImplTest, BEH_Store) {
   bool done(false);
   PopulateRoutingTable(g_kKademliaK * 2, 500);
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -1502,7 +1499,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
   bool done(false);
   PopulateRoutingTable(g_kKademliaK * 2, 500);
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -1660,7 +1658,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
   bool done(false);
   PopulateRoutingTable(g_kKademliaK, 500);
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -1893,7 +1892,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
   PopulateRoutingTable(g_kKademliaK * 2, 500);
   node_->joined_ = true;
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
   NodeId key = GenerateRandomId(node_id_, 498);
@@ -2074,7 +2074,8 @@ TEST_F(MockNodeImplTest, BEH_Getters) {
     EXPECT_EQ(Contact(), node_->contact());
   }
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
-      new MockRpcs<transport::TcpTransport>(asio_service_, private_key_));
+      new MockRpcs<transport::TcpTransport>(asio_service_.service(),
+                                            private_key_));
   new_rpcs->set_node_id(node_id_);
   SetLocalRpcs<transport::TcpTransport>(new_rpcs);
   {

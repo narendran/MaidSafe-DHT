@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
 #include "boost/asio/ip/address.hpp"
-#include "boost/asio/io_service.hpp"
 #include "boost/date_time/posix_time/posix_time_duration.hpp"
 #include "boost/signals2/signal.hpp"
 
@@ -103,7 +102,6 @@ typedef boost::asio::ip::address IP;
 typedef uint16_t Port;
 
 
-typedef boost::asio::io_service AsioService;
 typedef std::shared_ptr<MessageHandler> MessageHandlerPtr;
 typedef std::shared_ptr<transport::Transport> TransportPtr;
 typedef std::shared_ptr<asymm::Keys> KeyPairPtr;

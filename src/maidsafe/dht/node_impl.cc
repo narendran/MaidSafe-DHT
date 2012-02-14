@@ -65,7 +65,7 @@ bool FindResultError(int result) {
 }
 }  // unnamed namespace
 
-NodeImpl::NodeImpl(AsioService &asio_service,                 // NOLINT (Fraser)
+NodeImpl::NodeImpl(boost::asio::io_service &asio_service,     // NOLINT (Fraser)
                    TransportPtr listening_transport,
                    MessageHandlerPtr message_handler,
                    KeyPairPtr default_asym_key_pair,
@@ -114,7 +114,7 @@ NodeImpl::NodeImpl(AsioService &asio_service,                 // NOLINT (Fraser)
 
 NodeImpl::~NodeImpl() {
   if (joined_)
-    Leave(NULL);
+    Leave(nullptr);
 }
 
 void NodeImpl::Join(const NodeId &node_id,
@@ -630,7 +630,8 @@ void NodeImpl::DoLookupIteration(LookupArgsPtr lookup_args) {
           (*itr).second.rpc_state = ContactInfo::kRepliedOK;
         } else {
           if (lookup_args->kOperationType == LookupArgs::kFindValue) {
-            DLOG(INFO) << "Sending RPC to " << DebugId(lookup_args->kTarget);
+            DLOG(INFO) << "Sending FindValue " << DebugId(lookup_args->kTarget)
+                       << " to " << DebugId((*itr).first);
             rpcs_->FindValue(lookup_args->kTarget,
                              lookup_args->kNumContactsRequested,
                              lookup_args->private_key,
@@ -639,7 +640,6 @@ void NodeImpl::DoLookupIteration(LookupArgsPtr lookup_args) {
                                        this, args::_1, args::_2, args::_3,
                                        args::_4, args::_5, (*itr).first,
                                        lookup_args));
-            DLOG(INFO) << "Sent RPC to " << DebugId(lookup_args->kTarget);
           } else {
             rpcs_->FindNodes(lookup_args->kTarget,
                              lookup_args->kNumContactsRequested,
@@ -1467,7 +1467,7 @@ void NodeImpl::SendDownlist(const Downlist &downlist) {
   }
   // Send RPCs
   auto itr(downlist_by_provider.begin());
-  while (itr != downlist_by_provider.end()) {
+  while (joined_ && itr != downlist_by_provider.end()) {
     rpcs_->Downlist((*itr).second, default_private_key_, (*itr).first);
     ++itr;
   }

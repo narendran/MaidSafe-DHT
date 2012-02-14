@@ -98,7 +98,11 @@ class NodeTest : public testing::Test {
            (code >= transport::kTransportConditionLimit);
   }
 
-  std::shared_ptr<LocalNetwork<Node> > env_;
+  void TearDown() {
+    chosen_container_->Stop(nullptr);
+  }
+
+  std::shared_ptr<LocalNetwork<Node>> env_;
   const bptime::time_duration kTimeout_;
   size_t chosen_node_index_;
   NodeContainerPtr chosen_container_;
@@ -121,7 +125,7 @@ TEST_F(NodeTest, FUNC_Ping) {
   chosen_container_->GetAndResetPingResult(&result);
   EXPECT_EQ(kSuccess, result);
 
-  target_container->node()->Leave(NULL);
+  target_container->node()->Leave(nullptr);
   chosen_container_->Ping(target_container->node()->contact());
   EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
               chosen_container_->wait_for_ping_functor()));
@@ -145,7 +149,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using an empty bootstrap list - should start a new network
@@ -160,7 +164,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list having only the joining node's contact - should
@@ -175,7 +179,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list having the joining node's contact in first
@@ -193,7 +197,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list having the joining node's contact in first
@@ -222,7 +226,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
             node_container->Start(bootstrap_contacts,
                                   std::make_pair(1025U, 65535U)));
   EXPECT_FALSE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list having only offline contacts - should fail to
@@ -238,7 +242,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
             node_container->Start(bootstrap_contacts,
                                   std::make_pair(1025U, 65535U)));
   EXPECT_FALSE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list with online contacts followed by offline ones -
@@ -255,7 +259,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 
   // Test using a bootstrap list with offline contacts followed by online ones -
@@ -270,7 +274,7 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
   EXPECT_TRUE(node_container->node()->joined());
-  node_container->Stop(NULL);
+  node_container->Stop(nullptr);
   EXPECT_FALSE(node_container->node()->joined());
 }
 
@@ -496,7 +500,7 @@ TEST_F(NodeTest, FUNC_ClientFindValue) {
     boost::mutex::scoped_lock lock(env_->mutex_);
     client_node_container->Store(kKey, kValue, "", bptime::pos_infin,
         PrivateKeyPtr(new asymm::PrivateKey(
-            chosen_container_->key_pair()->private_key)));
+            client_node_container->key_pair()->private_key)));
     EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
                 client_node_container->wait_for_store_functor()));
     result = kGeneralError;
@@ -509,7 +513,7 @@ TEST_F(NodeTest, FUNC_ClientFindValue) {
     boost::mutex::scoped_lock lock(env_->mutex_);
     client_node_container->FindValue(kKey,
         PrivateKeyPtr(new asymm::PrivateKey(
-            chosen_container_->key_pair()->private_key)));
+            client_node_container->key_pair()->private_key)));
     EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
                 client_node_container->wait_for_find_value_functor()));
     client_node_container->GetAndResetFindValueResult(&find_value_returns);
@@ -568,7 +572,7 @@ TEST_F(NodeTest, FUNC_FindDeadNode) {
   while (chosen_node_index_ == target_index)
     target_index = RandomUint32() % env_->node_containers_.size();
   NodeContainerPtr target_container(env_->node_containers_[target_index]);
-  target_container->Stop(NULL);
+  target_container->Stop(nullptr);
 
   boost::mutex::scoped_lock lock(env_->mutex_);
   chosen_container_->FindNodes(target_container->node()->contact().node_id());
@@ -734,7 +738,7 @@ TEST_F(NodeTest, FUNC_FindNodes) {
                        (env_->node_containers_.size());
   {
     boost::mutex::scoped_lock lock(env_->mutex_);
-    chosen_container_->Stop(NULL);
+    chosen_container_->Stop(nullptr);
     env_->node_containers_[index]->FindNodes(
         chosen_container_->node()->contact().node_id());
     EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,

@@ -282,7 +282,7 @@ volatile bool MockMessageHandler::ops_completion_flag = false;
 template <typename TransportType>
 class MockRpcs : public Rpcs<TransportType> {
  public:
-  MockRpcs(AsioService &asio_service,                     // NOLINT (Fraser)
+  MockRpcs(boost::asio::io_service &asio_service,                     // NOLINT (Fraser)
            PrivateKeyPtr private_key,
            const int &request_type,
            const uint16_t &repeat_factor,
@@ -390,7 +390,7 @@ class MockRpcsTest : public testing::Test {
 
  protected:
   static asymm::Keys crypto_key_pair_;
-  AsioService asio_service_;
+  boost::asio::io_service asio_service_;
   PrivateKeyPtr private_key_;
   Contact peer_;
 };

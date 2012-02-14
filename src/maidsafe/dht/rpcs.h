@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utility>
 #include <vector>
 
+#include "boost/asio/io_service.hpp"
 #include "boost/date_time/posix_time/posix_time_types.hpp"
 #include "boost/tuple/tuple.hpp"
 
@@ -86,12 +87,12 @@ struct RpcsFailurePeer {
 template <typename TransportType>
 class Rpcs {
  public:
-  Rpcs(AsioService &asio_service, PrivateKeyPtr private_key)  // NOLINT (Fraser)
-      : asio_service_(asio_service),
-        kFailureTolerance_(2),
-        contact_(),
-        default_private_key_(private_key),
-        connected_objects_() {}
+  Rpcs(boost::asio::io_service &asio_service, PrivateKeyPtr private_key)  // NOLINT (Fraser)
+          : asio_service_(asio_service),
+            kFailureTolerance_(2),
+            contact_(),
+            default_private_key_(private_key),
+            connected_objects_() {}
   virtual ~Rpcs() {}
   virtual void Ping(PrivateKeyPtr private_key,
                     const Contact &peer,
@@ -154,7 +155,7 @@ class Rpcs {
     PrivateKeyPtr private_key);
 
  protected:
-  AsioService &asio_service_;
+  boost::asio::io_service &asio_service_;
   const uint16_t kFailureTolerance_;
 
  private:

@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/asio/io_service.hpp"
 #include "boost/enable_shared_from_this.hpp"
 
+#include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
@@ -118,18 +119,9 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
         local_asio_(),
         rank_info_(),
         contacts_(),
-        transport_(),
-        thread_group_(),
-        work_(new boost::asio::io_service::work(asio_service_)),
-        work1_(new boost::asio::io_service::work(local_asio_)) {
-    for (int i = 0; i != 3; ++i) {
-      thread_group_.create_thread(
-          std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-              &boost::asio::io_service::run), &asio_service_));
-      thread_group_.create_thread(
-          std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-              &boost::asio::io_service::run), &local_asio_));
-    }
+        transport_() {
+    asio_service_.Start(3);
+    local_asio_.Start(3);
   }
 
   static void SetUpTestCase() {
@@ -150,7 +142,7 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
     key_pair.public_key = sender_crypto_key_id_.public_key;
     rpcs_key_pair_.reset(new asymm::Keys(key_pair));
     rpcs_= std::shared_ptr<Rpcs<T>>(new Rpcs<T>( // NOLINT (Fraser)
-        asio_service_,
+        asio_service_.service(),
         GetPrivateKeyPtr(rpcs_key_pair_)));
     rpcs_contact_ = ComposeContactWithKey(rpcs_node_id,
                                           5010,
@@ -158,7 +150,7 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
     rpcs_->set_contact(rpcs_contact_);
     // service setup
     int start_listening_result(transport::kError), attempts(0);
-    transport_.reset(new T(local_asio_));
+    transport_.reset(new T(local_asio_.service()));
     while (start_listening_result != kSuccess && attempts != 5) {
       Port port((RandomUint32() % 64511) + 1025);
       start_listening_result =
@@ -199,10 +191,8 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   virtual void TearDown() {}
 
   ~RpcsTest() {
-    work_.reset();
-    work1_.reset();
-    asio_service_.stop();
-    local_asio_.stop();
+    asio_service_.Stop();
+    local_asio_.Stop();
   }
 
   void PopulateRoutingTable(uint16_t count) {
@@ -298,11 +288,8 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   }
 
   void StopAndReset() {
-    asio_service_.stop();
-    local_asio_.stop();
-    work_.reset();
-    work1_.reset();
-    thread_group_.join_all();
+    asio_service_.Stop();
+    local_asio_.Stop();
   }
 
  protected:
@@ -315,8 +302,7 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   KeyPairPtr service_key_pair_;
   std::shared_ptr<Service> service_;
   KeyPairPtr rpcs_key_pair_;
-  AsioService asio_service_;
-  AsioService local_asio_;
+  AsioService asio_service_, local_asio_;
   std::shared_ptr<Rpcs<T>> rpcs_;
   Contact rpcs_contact_;
   Contact service_contact_;
@@ -326,9 +312,6 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   std::vector<Contact> contacts_;
   TransportPtr transport_;
   MessageHandlerPtr handler_;
-  boost::thread_group thread_group_;
-  WorkPtr work_;
-  WorkPtr work1_;
 };
 
 template <typename T>
@@ -1605,19 +1588,10 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
         rank_info_(),
         contacts_(),
         transport_(),
-        handler_(),
-        thread_group_(),
-        work_(),
-        work1_(),
-        dispatcher_work_(new boost::asio::io_service::work(dispatcher_)) {
+        handler_() {
     for (int index = 0; index < g_kRpcClientNo; ++index) {
       asio_services_.push_back(std::shared_ptr<AsioService>(new AsioService));
-      WorkPtr workptr(new
-          boost::asio::io_service::work(*asio_services_[index]));
-      work_.push_back(workptr);
-      thread_group_.create_thread(
-          std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-              &boost::asio::io_service::run), asio_services_[index]));
+      (*asio_services_.rend())->Start(1);
     }
     const int kMinServerPositionOffset(kKeySizeBits - g_kRpcServersNo);
     for (int index = 0; index != g_kRpcServersNo; ++index) {
@@ -1630,15 +1604,9 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
       AlternativeStorePtr alternative_store;
       alternative_store_.push_back(alternative_store);
       local_asios_.push_back(std::shared_ptr<AsioService>(new AsioService));
-      WorkPtr workptr(new boost::asio::io_service::work(*local_asios_[index]));
-      work1_.push_back(workptr);
-      thread_group_.create_thread(
-          std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-              &boost::asio::io_service::run), local_asios_[index]));
+      (*local_asios_.rend())->Start(1);
     }
-    thread_group_.create_thread(
-        std::bind(static_cast<size_t(boost::asio::io_service::*)()>(
-            &boost::asio::io_service::run), &dispatcher_));
+    dispatcher_.Start(1);
   }
 
   static void SetUpTestCase() {
@@ -1671,7 +1639,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
       key_pair.public_key = senders_crypto_key_id3_[index].public_key;
       rpcs_key_pair_.push_back(KeyPairPtr(new asymm::Keys(key_pair)));
       rpcs_.push_back(std::shared_ptr<Rpcs<T>>(               // NOLINT (Fraser)
-          new Rpcs<T>(*asio_services_[index],
+          new Rpcs<T>(asio_services_[index]->service(),
                       GetPrivateKeyPtr(rpcs_key_pair_[index]))));
 
       Contact rpcs_contact;
@@ -1702,7 +1670,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
                                  g_kKademliaK)));
       service_[index]->set_node_contact(service_contact_[index]);
       service_[index]->set_node_joined(true);
-      transport_.push_back(TransportPtr(new T(*local_asios_[index])));
+      transport_.push_back(TransportPtr(new T(local_asios_[index]->service())));
       handler_.push_back(
           MessageHandlerPtr(new MessageHandler(
               GetPrivateKeyPtr(services_securifier_[index]))));
@@ -1717,33 +1685,27 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
     }
   }
 
-  virtual void TearDown() { }
-
   ~RpcsMultiServerNodesTest() {
-    for (int index = 0; index < g_kRpcClientNo; ++index) {
-      asio_services_[index]->stop();
-      work_[index].reset();
-    }
-    for (int index = 0; index < g_kRpcServersNo; ++index) {
-      local_asios_[index]->stop();
-      work1_[index].reset();
-    }
-    dispatcher_.stop();
-    dispatcher_work_.reset();
+    std::for_each(asio_services_.begin(), asio_services_.end(),
+                  [](std::shared_ptr<AsioService> asio_service) {
+        asio_service->Stop();
+    });
+    std::for_each(local_asios_.begin(), local_asios_.end(),
+                  [](std::shared_ptr<AsioService> asio_service) {
+        asio_service->Stop();
+    });
+    dispatcher_.Stop();
   }
 
   void StopAndReset() {
-    for (int index = 0; index < g_kRpcClientNo; ++index) {
-      asio_services_[index]->stop();
-      work_[index].reset();
-    }
-    for (int index = 0; index < g_kRpcServersNo; ++index) {
-      local_asios_[index]->stop();
-      work1_[index].reset();
-    }
-    dispatcher_.stop();
-    dispatcher_work_.reset();
-    thread_group_.join_all();
+    std::for_each(asio_services_.begin(), asio_services_.end(),
+                  [](std::shared_ptr<AsioService> asio_service) {
+        asio_service->Stop();
+    });
+    std::for_each(local_asios_.begin(), local_asios_.end(),
+                  [](std::shared_ptr<AsioService> asio_service) {
+        asio_service->Stop();
+    });
   }
 
   void RpcOperations(const int index, const int server_index,
@@ -1856,8 +1818,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
   std::vector<KeyPairPtr> services_securifier_;
   std::vector<ServicePtr> service_;
   std::vector<KeyPairPtr> rpcs_key_pair_;
-  std::vector<std::shared_ptr<AsioService>> asio_services_;
-  std::vector<std::shared_ptr<AsioService>> local_asios_;
+  std::vector<std::shared_ptr<AsioService>> asio_services_, local_asios_;
   AsioService dispatcher_;
   std::vector<std::shared_ptr<Rpcs<T>>> rpcs_;                // NOLINT (Fraser)
   std::vector<Contact> rpcs_contact_;
@@ -1868,10 +1829,8 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
   std::vector<Contact> contacts_;
   std::vector<TransportPtr> transport_;
   std::vector<MessageHandlerPtr> handler_;
-  boost::thread_group thread_group_;
   std::vector<WorkPtr> work_;
   std::vector<WorkPtr> work1_;
-  WorkPtr dispatcher_work_;
 };
 
 template <typename T>
@@ -1894,7 +1853,7 @@ TYPED_TEST_P(RpcsMultiServerNodesTest, FUNC_MultipleServerOperations) {
       done[client_index][index] = false;
       response_code[client_index][index] = 0;
       // This is to enable having more than one operation
-      this->dispatcher_.post(
+      this->dispatcher_.service().post(
           std::bind(&RpcsMultiServerNodesTest<TypeParam>::RpcOperations, this,
                     client_index, index, &done[client_index][index],
                     &response_code[client_index][index]));

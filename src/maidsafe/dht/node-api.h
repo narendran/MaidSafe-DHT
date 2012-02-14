@@ -40,7 +40,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "boost/asio/io_service.hpp"
 #include "boost/date_time/posix_time/posix_time_types.hpp"
-#include "boost/scoped_ptr.hpp"
 
 #include "maidsafe/common/version.h"
 
@@ -92,7 +91,7 @@ class Node {
   //
   // mean_refresh_interval indicates the average interval between calls to
   // refresh values.
-  Node(AsioService &asio_service,                             // NOLINT (Fraser)
+  Node(boost::asio::io_service &asio_service,                 // NOLINT (Fraser)
        TransportPtr listening_transport,
        MessageHandlerPtr message_handler,
        KeyPairPtr default_key_pair,
@@ -253,7 +252,7 @@ class Node {
   uint16_t k() const;
 
  private:
-  boost::scoped_ptr<NodeImpl> pimpl_;
+  std::unique_ptr<NodeImpl> pimpl_;
 };
 
 
