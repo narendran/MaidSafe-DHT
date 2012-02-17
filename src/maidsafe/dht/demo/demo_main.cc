@@ -88,30 +88,30 @@ void OptionDependency(const po::variables_map &variables_map,
   }
 }
 
-bool WriteBootstrapFile(std::vector<mk::Contact> *bootstrap_contacts,
-                        const std::string &filename) {
-  try {
-    std::ofstream ofs(filename);
-    boost::archive::xml_oarchive oa(ofs);
-    boost::serialization::serialize(oa, *bootstrap_contacts, 0);
-    DLOG(INFO) << "Updated bootstrap info.";
-  } catch(const std::exception &e) {
-    DLOG(WARNING) << "Exception: " << e.what();
-    return false;
-  }
+bool WriteBootstrapFile(std::vector<mk::Contact> * /*bootstrap_contacts*/,
+                        const std::string &/*filename*/) {
+  //try {
+  //  std::ofstream ofs(filename);
+  //  boost::archive::xml_oarchive oa(ofs);
+  //  boost::serialization::serialize(oa, *bootstrap_contacts, 0);
+  //  DLOG(INFO) << "Updated bootstrap info.";
+  //} catch(const std::exception &e) {
+  //  DLOG(WARNING) << "Exception: " << e.what();
+  //  return false;
+  //}
   return true;
 }
 
-bool ReadBootstrapFile(std::vector<mk::Contact> *bootstrap_contacts,
-                       const std::string &filename) {
-  try {
-    std::ifstream ifs(filename);
-    boost::archive::xml_iarchive ia(ifs);
-    boost::serialization::serialize(ia, *bootstrap_contacts, 0);
-  } catch(const std::exception &e) {
-    DLOG(WARNING) << "Exception: " << e.what();
-    return false;
-  }
+bool ReadBootstrapFile(std::vector<mk::Contact> * /*bootstrap_contacts*/,
+                       const std::string &/*filename*/) {
+  //try {
+  //  std::ifstream ifs(filename);
+  //  boost::archive::xml_iarchive ia(ifs);
+  //  boost::serialization::serialize(ia, *bootstrap_contacts, 0);
+  //} catch(const std::exception &e) {
+  //  DLOG(WARNING) << "Exception: " << e.what();
+  //  return false;
+  //}
   return true;
 }
 

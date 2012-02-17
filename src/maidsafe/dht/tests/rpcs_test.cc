@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/transport/udp_transport.h"
 #include "maidsafe/dht/config.h"
@@ -1561,7 +1562,8 @@ REGISTER_TYPED_TEST_CASE_P(RpcsTest,
                            FUNC_DeleteRefreshMultipleRequests,
                            FUNC_DifferentSecurifier);
 
-typedef ::testing::Types<transport::TcpTransport,
+typedef ::testing::Types<transport::RudpTransport,
+                         transport::TcpTransport,
                          transport::UdpTransport> TransportTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(TheRpcTests, RpcsTest, TransportTypes);
 

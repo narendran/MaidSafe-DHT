@@ -46,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/transport/transport.h"
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/dht/log.h"
 // #include "maidsafe-dht/common/routing_table.h"
@@ -106,6 +107,7 @@ class NodeTest : public testing::Test {
   const bptime::time_duration kTimeout_;
   size_t chosen_node_index_;
   NodeContainerPtr chosen_container_;
+
  private:
   NodeTest(const NodeTest&);
   NodeTest& operator=(const NodeTest&);

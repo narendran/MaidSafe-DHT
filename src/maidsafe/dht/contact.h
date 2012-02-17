@@ -40,6 +40,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/rsa.h"
 #include "maidsafe/common/utils.h"
 
+#include "maidsafe/transport/contact.h"
 #include "maidsafe/transport/transport.h"
 
 #include "maidsafe/dht/node_id.h"
@@ -59,7 +60,7 @@ namespace dht {
 
 /** Object containing a Node's Kademlia ID and details of its endpoint(s).
  *  @class Contact */
-class Contact {
+class Contact {  // : public transport::Contact {
  public:
   /** Default constructor. */
   Contact();
@@ -103,6 +104,20 @@ class Contact {
   NodeId node_id() const;
 
   /** Getter.
+   *  @return ID of the public key which should be used to encrypt messages for
+   *          this contact. */
+  asymm::Identity public_key_id() const;
+
+  /** Getter.
+   *  @return Public key which should be used to encrypt messages for this
+   *          contact. */
+  asymm::PublicKey public_key() const;
+
+  /** Getter.
+   *  @return Any extra information held for this contact. */
+  std::string other_info() const;
+
+  /** Getter.
    *  @return The contact's external endpoint. */
   transport::Endpoint endpoint() const;
 
@@ -122,20 +137,6 @@ class Contact {
    *  @return The contact's external endpoint which is on TCP port 80. */
   transport::Endpoint tcp80endpoint() const;
 
-  /** Getter.
-   *  @return ID of the public key which should be used to encrypt messages for
-   *          this contact. */
-  asymm::Identity public_key_id() const;
-
-  /** Getter.
-   *  @return Public key which should be used to encrypt messages for this
-   *          contact. */
-  asymm::PublicKey public_key() const;
-
-  /** Getter.
-   *  @return Any extra information held for this contact. */
-  std::string other_info() const;
-
   /** Setter to mark which of the contact's endpoints should be preferred.
    *  @param ip IP of preferred endpoint.
    *  @return Success of operation. */
@@ -148,6 +149,10 @@ class Contact {
   /** Indicate whether the contact is directly-connected or not.
    *  @return True if directly-connected, else false. */
   bool IsDirectlyConnected() const;
+
+  int Contact::Serialise(std::string *serialised) const;
+
+  int Contact::Parse(const std::string &serialised);
 
   /** Assignment operator. */
   Contact& operator=(const Contact &other);
@@ -173,8 +178,16 @@ class Contact {
   // @}
 
  private:
-  class Impl;
-  std::unique_ptr<Impl> pimpl_;
+  void Init();
+  void Clear();
+  bool MoveLocalEndpointToFirst(const transport::IP &ip);
+  bool IpMatchesEndpoint(const transport::IP &ip,
+                         const transport::Endpoint &endpoint);
+  NodeId node_id_;
+  std::string other_info_;
+  asymm::PublicKey public_key_;
+  asymm::Identity public_key_id_;
+  transport::Contact transport_details_;
 };
 
 
@@ -226,73 +239,8 @@ OrderedContacts CreateOrderedContacts(InputIterator first,
                 args::_1, args::_2, target));
 }
 
-
 }  // namespace dht
 
 }  // namespace maidsafe
-
-
-
-namespace mk = maidsafe::dht;
-namespace mt = maidsafe::transport;
-
-namespace boost {
-
-namespace serialization {
-
-#ifdef __MSVC__
-#  pragma warning(disable: 4127)
-#endif
-template <typename Archive>
-void serialize(Archive &archive,                              // NOLINT (Fraser)
-               mk::Contact &contact,
-               const unsigned int& /*version*/) {
-  mk::NodeId node_id;
-  mt::Endpoint endpoint;
-  std::vector<mt::Endpoint> local_endpoints;
-  mt::Endpoint rendezvous_endpoint;
-  bool tcp443, tcp80;
-  std::string public_key_id, public_key, other_info;
-
-  if (Archive::is_saving::value) {
-    node_id = contact.node_id();
-    endpoint = contact.endpoint();
-    local_endpoints = contact.local_endpoints();
-    rendezvous_endpoint = contact.rendezvous_endpoint();
-    tcp443 = contact.tcp443endpoint().port == 443;
-    tcp80 = contact.tcp80endpoint().port == 80;
-    public_key_id = maidsafe::EncodeToBase32(contact.public_key_id());
-    maidsafe::asymm::EncodePublicKey(contact.public_key(), &public_key);
-    public_key = maidsafe::EncodeToBase32(public_key);
-    other_info = contact.other_info();
-  }
-
-  archive& make_nvp("node_id", node_id);
-  archive& make_nvp("endpoint", endpoint);
-  archive& make_nvp("local_endpoints", local_endpoints);
-  archive& make_nvp("rendezvous_endpoint", rendezvous_endpoint);
-  archive& make_nvp("tcp443", tcp443);
-  archive& make_nvp("tcp80", tcp80);
-  archive& make_nvp("public_key_id", public_key_id);
-  archive& make_nvp("public_key", public_key);
-  archive& make_nvp("other_info", other_info);
-
-  if (Archive::is_loading::value) {
-    public_key_id = maidsafe::DecodeFromBase32(public_key_id);
-    public_key = maidsafe::DecodeFromBase32(public_key);
-    maidsafe::rsa::PublicKey asym_public_key;
-    maidsafe::asymm::DecodePublicKey(public_key, &asym_public_key);
-    contact = mk::Contact(node_id, endpoint, local_endpoints,
-                          rendezvous_endpoint, tcp443, tcp80, public_key_id,
-                          asym_public_key, other_info);
-  }
-#ifdef __MSVC__
-#  pragma warning(default: 4127)
-#endif
-}
-
-}  // namespace serialization
-
-}  // namespace boost
 
 #endif  // MAIDSAFE_DHT_CONTACT_H_

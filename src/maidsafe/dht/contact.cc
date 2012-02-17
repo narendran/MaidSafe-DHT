@@ -28,17 +28,25 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/contact.h"
 
 #include <string>
-
-#include "maidsafe/dht/contact_impl.h"
 #include "maidsafe/dht/utils.h"
 
 namespace maidsafe {
 
 namespace dht {
 
-Contact::Contact() : pimpl_(new Contact::Impl) {}
+Contact::Contact()
+    : node_id_(),
+      public_key_id_(),
+      public_key_(),
+      other_info_(),
+      transport_details_() {}
 
-Contact::Contact(const Contact &other) : pimpl_(new Contact::Impl(other)) {}
+Contact::Contact(const Contact &other)
+    : node_id_(other.node_id_),
+      public_key_id_(other.public_key_id_),
+      public_key_(other.public_key_),
+      other_info_(other.other_info_),
+      transport_details_(other.transport_details_) {}
 
 Contact::Contact(const NodeId &node_id,
                  const transport::Endpoint &endpoint,
@@ -49,88 +57,131 @@ Contact::Contact(const NodeId &node_id,
                  const asymm::Identity &public_key_id,
                  const asymm::PublicKey &public_key,
                  const std::string &other_info)
-    : pimpl_(new Contact::Impl(node_id, endpoint, local_endpoints,
-                               rendezvous_endpoint, tcp443, tcp80,
-                               public_key_id, public_key, other_info)) {}
+    : node_id_(node_id),
+      public_key_id_(public_key_id),
+      public_key_(public_key),
+      other_info_(other_info),
+      transport_details_(transport::Contact(endpoint, local_endpoints,
+                                            rendezvous_endpoint, tcp443,
+                                            tcp80)) {
+  Init();
+}
+
+void Contact::Init() {
+  if (!node_id_.IsValid() || !transport_details_.Init())
+    return Clear();
+}
+
+void Contact::Clear() {
+  transport_details_.Clear();
+  node_id_ = NodeId();
+}
 
 Contact::~Contact() {}
 
 NodeId Contact::node_id() const {
-  return pimpl_->node_id();
-}
-
-transport::Endpoint Contact::endpoint() const {
-  return pimpl_->endpoint();
-}
-
-std::vector<transport::Endpoint> Contact::local_endpoints() const {
-  return pimpl_->local_endpoints();
-}
-
-transport::Endpoint Contact::rendezvous_endpoint() const {
-  return pimpl_->rendezvous_endpoint();
-}
-
-transport::Endpoint Contact::tcp443endpoint() const {
-  return pimpl_->tcp443endpoint();
-}
-
-transport::Endpoint Contact::tcp80endpoint() const {
-  return pimpl_->tcp80endpoint();
+  return node_id_;
 }
 
 asymm::Identity Contact::public_key_id() const {
-  return pimpl_->public_key_id();
+    return public_key_id_;
 }
 
 asymm::PublicKey Contact::public_key() const {
-  return pimpl_->public_key();
+  return public_key_;
 }
 
 std::string Contact::other_info() const {
-  return pimpl_->other_info();
+  return other_info_;
+}
+
+transport::Endpoint Contact::endpoint() const {
+  return transport_details_.endpoint();
+}
+
+std::vector<transport::Endpoint> Contact::local_endpoints() const {
+  return transport_details_.local_endpoints();
+}
+
+transport::Endpoint Contact::rendezvous_endpoint() const {
+  return transport_details_.rendezvous_endpoint();
+}
+
+transport::Endpoint Contact::tcp443endpoint() const {
+  return transport_details_.tcp443endpoint();
+}
+
+transport::Endpoint Contact::tcp80endpoint() const {
+  return transport_details_.tcp80endpoint();
 }
 
 bool Contact::SetPreferredEndpoint(const transport::IP &ip) {
-  return pimpl_->SetPreferredEndpoint(ip);
+  return transport_details_.SetPreferredEndpoint(ip);
+}
+
+bool Contact::MoveLocalEndpointToFirst(const transport::IP &ip) {
+  return transport_details_.MoveLocalEndpointToFirst(ip);
+}
+
+bool Contact::IpMatchesEndpoint(const transport::IP &ip,
+                                const transport::Endpoint &endpoint) {
+  return transport_details_.IpMatchesEndpoint(ip, endpoint);
 }
 
 transport::Endpoint Contact::PreferredEndpoint() const {
-  return pimpl_->PreferredEndpoint();
+  return transport_details_.PreferredEndpoint();
 }
 
 bool Contact::IsDirectlyConnected() const {
-  return pimpl_->IsDirectlyConnected();
+  return transport_details_.IsDirectlyConnected();
+}
+
+// TODO(Prakash): Implementation pending
+int Contact::Serialise(std::string * /*serialised*/) const {
+  return kSuccess;
+}
+
+int Contact::Parse(const std::string & /*serialised*/) {
+  return kSuccess;
 }
 
 Contact& Contact::operator=(const Contact &other) {
-  if (this != &other)
-    *pimpl_ = *other.pimpl_;
+  if (this != &other) {
+    node_id_ = other.node_id_;
+    public_key_id_ = other.public_key_id_;
+    public_key_ = other.public_key_;
+    other_info_ = other.other_info_;
+    transport_details_ = other.transport_details_;
+  }
   return *this;
 }
 
 bool Contact::operator==(const Contact &other) const {
-  return *pimpl_ == *other.pimpl_;
+  if (node_id_ == other.node_id_)
+    return (node_id_.String() != kZeroId) ||
+           (endpoint().ip == other.endpoint().ip);
+  else
+    return false;
 }
 
 bool Contact::operator!=(const Contact &other) const {
-  return *pimpl_ != *other.pimpl_;
+  return !(*this == other);
 }
 
 bool Contact::operator<(const Contact &other) const {
-  return *pimpl_ < *other.pimpl_;
+  return node_id_ < other.node_id_;
 }
 
 bool Contact::operator>(const Contact &other) const {
-  return *pimpl_ > *other.pimpl_;
+  return node_id_ > other.node_id_;
 }
 
 bool Contact::operator<=(const Contact &other) const {
-  return *pimpl_ <= *other.pimpl_;
+  return (node_id_ < other.node_id_ || (*this == other));
 }
 
 bool Contact::operator>=(const Contact &other) const {
-  return *pimpl_ >= *other.pimpl_;
+  return (node_id_ > other.node_id_ || (*this == other));
 }
 
 std::string DebugId(const Contact &contact) {
