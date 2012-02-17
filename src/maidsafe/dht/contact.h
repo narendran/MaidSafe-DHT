@@ -150,9 +150,9 @@ class Contact {  // : public transport::Contact {
    *  @return True if directly-connected, else false. */
   bool IsDirectlyConnected() const;
 
-  int Contact::Serialise(std::string *serialised) const;
+  int Serialise(std::string *serialised) const;
 
-  int Contact::Parse(const std::string &serialised);
+  int Parse(const std::string &serialised);
 
   /** Assignment operator. */
   Contact& operator=(const Contact &other);
