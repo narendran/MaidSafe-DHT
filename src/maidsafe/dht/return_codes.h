@@ -82,7 +82,11 @@ enum ReturnCode {
   kIterativeLookupFailed = -303013,
   kContactFailedToRespond = -303014,
   kValueAlreadyExists = -303015,
-  kFailedValidation = -303016
+  kFailedValidation = -303016,
+
+  // Contact
+  kSerialisation = -304001,
+  kParse = -304002
 };
 
 }  // namespace dht

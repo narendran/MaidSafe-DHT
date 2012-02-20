@@ -37,6 +37,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/utils.h"
 #include "maidsafe/common/breakpad.h"
 
+#ifdef __MSVC__
+#  pragma warning(push)
+#  pragma warning(disable: 4127 4244 4267)
+#endif
+#include "maidsafe/dht/kademlia.pb.h"
+#ifdef __MSVC__
+#  pragma warning(pop)
+#endif
 #include "maidsafe/dht/log.h"
 #include "maidsafe/dht/version.h"
 #include "maidsafe/dht/config.h"
@@ -46,6 +54,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/node-api.h"
 #include "maidsafe/dht/node_container.h"
 #include "maidsafe/dht/demo/commands.h"
+#include "maidsafe/dht/utils.h"
 
 
 namespace bptime = boost::posix_time;
@@ -88,30 +97,45 @@ void OptionDependency(const po::variables_map &variables_map,
   }
 }
 
-bool WriteBootstrapFile(std::vector<mk::Contact> * /*bootstrap_contacts*/,
-                        const std::string &/*filename*/) {
-  //try {
-  //  std::ofstream ofs(filename);
-  //  boost::archive::xml_oarchive oa(ofs);
-  //  boost::serialization::serialize(oa, *bootstrap_contacts, 0);
-  //  DLOG(INFO) << "Updated bootstrap info.";
-  //} catch(const std::exception &e) {
-  //  DLOG(WARNING) << "Exception: " << e.what();
-  //  return false;
-  //}
+bool WriteBootstrapFile(std::vector<mk::Contact> * contacts,
+                        const std::string &filename) {
+  if (contacts == nullptr)
+    return false;
+  maidsafe::dht::protobuf::BootstrapContacts bootstrap_contacts;
+  for (size_t i = 0; i < contacts->size(); i++) {
+    maidsafe::dht::protobuf::Contact * pb_contact =
+        bootstrap_contacts.add_contact();
+    *pb_contact = maidsafe::dht::ToProtobuf(contacts->at(i));
+  }
+  {
+    // Write the new bootstrap contacts back to disk.
+    std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
+    if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
+      DLOG(WARNING) << "Failed to write bootstrap contacts.";
+      return false;
+    }
+  }
   return true;
 }
 
-bool ReadBootstrapFile(std::vector<mk::Contact> * /*bootstrap_contacts*/,
-                       const std::string &/*filename*/) {
-  //try {
-  //  std::ifstream ifs(filename);
-  //  boost::archive::xml_iarchive ia(ifs);
-  //  boost::serialization::serialize(ia, *bootstrap_contacts, 0);
-  //} catch(const std::exception &e) {
-  //  DLOG(WARNING) << "Exception: " << e.what();
-  //  return false;
-  //}
+bool ReadBootstrapFile(std::vector<mk::Contact> * contacts,
+                       const std::string &filename) {
+  if (contacts == nullptr)
+    return false;
+  maidsafe::dht::protobuf::BootstrapContacts bootstrap_contacts;
+  {
+    // Read the existing bootstrap contacts.
+    std::ifstream ifs(filename);
+    if (!bootstrap_contacts.ParseFromIstream(&ifs)) {
+      DLOG(WARNING) << "Failed to parse bootstrap contacts.";
+      return false;
+    }
+  }
+  for (int i = 0; i < bootstrap_contacts.contact_size(); i++) {
+    maidsafe::dht::Contact contact =
+      maidsafe::dht::FromProtobuf(bootstrap_contacts.contact(i));
+    contacts->push_back(contact);
+  }
   return true;
 }
 
@@ -206,7 +230,7 @@ int main(int argc, char **argv) {
 #endif
   try {
     PortRange port_range(8000, 65535);
-    std::string logfile, bootstrap_file("bootstrap_contacts.xml");
+    std::string logfile, bootstrap_file("bootstrap_contacts");
     uint16_t k(4), alpha(3), beta(2);
     std::string ip("127.0.0.1");
     uint32_t refresh_interval(3600);

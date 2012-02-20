@@ -39,6 +39,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __MSVC__
 #  pragma warning(pop)
 #endif
+#include "maidsafe/dht/log.h"
 #include "maidsafe/dht/node_id.h"
 #include "maidsafe/dht/utils.h"
 
@@ -90,6 +91,44 @@ class ContactTest : public testing::Test {
   std::vector<transport::Endpoint> locals_, direct_connected_locals_;
   Contact contact_, rv_contact_, direct_connected_contact_;
 };
+
+bool WriteToFile(std::vector<Contact> *contacts, const std::string &filename) {
+  if (contacts == nullptr)
+    return false;
+  protobuf::BootstrapContacts bootstrap_contacts;
+  for (size_t i = 0; i < contacts->size(); i++) {
+    protobuf::Contact * pb_contact = bootstrap_contacts.add_contact();
+    *pb_contact = ToProtobuf(contacts->at(i));
+  }
+  {
+    // Write the new bootstrap contacts back to disk.
+    std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
+    if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
+      DLOG(WARNING) << "Failed to write bootstrap contacts.";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ReadFromFile(std::vector<Contact> *contacts, const std::string &filename) {
+  if (contacts == nullptr)
+    return false;
+  protobuf::BootstrapContacts bootstrap_contacts;
+  {
+    // Read the existing bootstrap contacts.
+    std::ifstream ifs(filename);
+    if (!bootstrap_contacts.ParseFromIstream(&ifs)) {
+      DLOG(WARNING) << "Failed to parse bootstrap contacts.";
+      return false;
+    }
+  }
+  for (int i = 0; i < bootstrap_contacts.contact_size(); i++) {
+    Contact contact = FromProtobuf(bootstrap_contacts.contact(i));
+    contacts->push_back(contact);
+  }
+  return true;
+}
 
 testing::AssertionResult ContactDetails(const Contact &contact,
                                         const NodeId &node_id,
@@ -428,6 +467,128 @@ TEST_F(ContactTest, BEH_RemoveContact) {
   EXPECT_TRUE(RemoveContact(NodeId(crypto::Hash<crypto::SHA512>("bbb")),
                             &contacts));
   EXPECT_EQ(2U, contacts.size());
+}
+
+TEST_F(ContactTest, BEH_ContactSerialization) {
+  std::vector<transport::Endpoint>
+        locals(1, transport::Endpoint("192.168.1.56", 8889));
+  Contact dht_contact(kNodeId_, kEndpoint_, locals, transport::Endpoint(),
+                      false, false, "aaa", asymm::PublicKey(), "ccc");
+  // Serialise DHT Contact
+  std::string serialised_dht_contact;
+  EXPECT_EQ(kSuccess, dht_contact.Serialise(&serialised_dht_contact));
+
+  // Parse the serialised DHT Contact as a Transport Contact
+  transport::Contact transport_contact;
+  EXPECT_EQ(kSuccess, transport_contact.Parse(serialised_dht_contact));
+
+  EXPECT_EQ(dht_contact.endpoint().ip, transport_contact.endpoint().ip);
+  EXPECT_EQ(dht_contact.endpoint().port, transport_contact.endpoint().port);
+  ASSERT_EQ(dht_contact.local_endpoints().size(),
+            transport_contact.local_endpoints().size());
+  for (size_t i = 0; i < dht_contact.local_endpoints().size(); ++i) {
+    EXPECT_EQ(dht_contact.local_endpoints().at(i).ip,
+              transport_contact.local_endpoints().at(i).ip);
+    EXPECT_EQ(dht_contact.local_endpoints().at(i).port,
+              transport_contact.local_endpoints().at(i).port);
+  }
+  EXPECT_EQ(dht_contact.rendezvous_endpoint().ip,
+            transport_contact.rendezvous_endpoint().ip);
+  EXPECT_EQ(dht_contact.rendezvous_endpoint().port,
+            transport_contact.rendezvous_endpoint().port);
+  EXPECT_EQ(dht_contact.tcp443endpoint().ip,
+            transport_contact.tcp443endpoint().ip);
+  EXPECT_EQ(dht_contact.tcp443endpoint().port,
+            transport_contact.tcp443endpoint().port);
+  EXPECT_EQ(dht_contact.tcp80endpoint().ip,
+            transport_contact.tcp80endpoint().ip);
+  EXPECT_EQ(dht_contact.tcp80endpoint().port,
+            transport_contact.tcp80endpoint().port);
+  EXPECT_EQ(dht_contact.PreferredEndpoint().ip,
+            transport_contact.PreferredEndpoint().ip);
+  EXPECT_EQ(dht_contact.PreferredEndpoint().port,
+            transport_contact.PreferredEndpoint().port);
+
+  // Serialise the parsed Transport Contact
+  std::string serialised_transport_contact;
+  EXPECT_EQ(0, transport_contact.Serialise(&serialised_transport_contact));
+  EXPECT_NE(serialised_dht_contact, serialised_transport_contact);
+
+  // Parse the original DHT Contact to a new DHT Contact
+  Contact dht_contact2;
+  EXPECT_EQ(kSuccess, dht_contact2.Parse(serialised_dht_contact));
+  EXPECT_EQ(dht_contact.endpoint().ip, dht_contact2.endpoint().ip);
+  EXPECT_EQ(dht_contact.endpoint().port, dht_contact2.endpoint().port);
+
+  ASSERT_EQ(dht_contact.local_endpoints().size(),
+            dht_contact2.local_endpoints().size());
+  for (size_t i = 0; i < dht_contact.local_endpoints().size(); ++i) {
+    EXPECT_EQ(dht_contact.local_endpoints().at(i).ip,
+              dht_contact2.local_endpoints().at(i).ip);
+    EXPECT_EQ(dht_contact.local_endpoints().at(i).port,
+              dht_contact2.local_endpoints().at(i).port);
+  }
+  EXPECT_EQ(dht_contact.rendezvous_endpoint().ip,
+            dht_contact2.rendezvous_endpoint().ip);
+  EXPECT_EQ(dht_contact.rendezvous_endpoint().port,
+            dht_contact2.rendezvous_endpoint().port);
+  EXPECT_EQ(dht_contact.tcp443endpoint().ip,
+            dht_contact2.tcp443endpoint().ip);
+  EXPECT_EQ(dht_contact.tcp443endpoint().port,
+            dht_contact2.tcp443endpoint().port);
+  EXPECT_EQ(dht_contact.tcp80endpoint().ip,
+            dht_contact2.tcp80endpoint().ip);
+  EXPECT_EQ(dht_contact.tcp80endpoint().port,
+            dht_contact2.tcp80endpoint().port);
+  EXPECT_EQ(dht_contact.PreferredEndpoint().ip,
+            dht_contact2.PreferredEndpoint().ip);
+  EXPECT_EQ(dht_contact.PreferredEndpoint().port,
+            dht_contact2.PreferredEndpoint().port);
+
+  EXPECT_EQ(dht_contact.node_id(), dht_contact2.node_id());
+  EXPECT_EQ(dht_contact.public_key_id(), dht_contact2.public_key_id());
+
+  EXPECT_TRUE(asymm::MatchingPublicKeys(dht_contact.public_key(),
+                                        dht_contact2.public_key()));
+  EXPECT_EQ(dht_contact.other_info(), dht_contact2.other_info());
+
+  // Check that parsing a serialised Transport Contact as a DHT Contact fails
+  EXPECT_EQ(kParse, dht_contact2.Parse(serialised_transport_contact));
+}
+
+TEST_F(ContactTest, BEH_ContactSerializationFileOperations) {
+  boost::system::error_code error_code;
+  std::string path("maidsafe/dht/" +
+                   (maidsafe::EncodeToBase32(RandomString(10U))));
+  fs::path file_path = fs::temp_directory_path() / path;
+  fs::create_directories(file_path, error_code);
+  ASSERT_EQ(0, error_code.value());
+  std::string file(file_path.string() + "/contacts.xml");
+
+  transport::Endpoint endpoint1("192.168.1.48", 8891);
+  transport::Endpoint endpoint2("192.168.1.44", 8896);
+  std::vector<transport::Endpoint> locals(1,
+      transport::Endpoint("192.168.1.56", 8889));
+  std::vector<transport::Endpoint> locals2(1,
+      transport::Endpoint("192.168.1.57", 8890));
+  transport::Endpoint rv_endpoint("192.168.1.58", 8891);
+  transport::Endpoint rv_endpoint2("192.168.1.59", 8892);
+  Contact contact1(kNodeId_, kEndpoint_, locals, transport::Endpoint(), false,
+                   false, "aaa", asymm::PublicKey(), "ccc");
+  Contact contact2(NodeId(crypto::Hash<crypto::SHA512>("5612348")), kEndpoint_,
+                   locals2, rv_endpoint2, false, false,
+                   "ddd", asymm::PublicKey(), "fff");
+  std::vector<maidsafe::dht::Contact> contacts;
+  contacts.push_back(contact1);
+  contacts.push_back(contact2);
+  EXPECT_TRUE(WriteToFile(&contacts, file));
+  contacts.clear();
+  ASSERT_EQ(0U, contacts.size());
+  EXPECT_TRUE(ReadFromFile(&contacts, file));
+  ASSERT_EQ(2U, contacts.size());
+  EXPECT_EQ(contacts.at(0), contact1);
+  EXPECT_EQ(contacts.at(1), contact2);
+  fs::remove_all(file_path);
 }
 
 }  // namespace test

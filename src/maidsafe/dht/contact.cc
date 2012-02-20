@@ -28,6 +28,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/contact.h"
 
 #include <string>
+#ifdef __MSVC__
+#  pragma warning(push)
+#  pragma warning(disable: 4127 4244 4267)
+#endif
+#include "maidsafe/dht/kademlia.pb.h"
+#ifdef __MSVC__
+#  pragma warning(pop)
+#endif
 #include "maidsafe/dht/utils.h"
 
 namespace maidsafe {
@@ -136,12 +144,75 @@ bool Contact::IsDirectlyConnected() const {
   return transport_details_.IsDirectlyConnected();
 }
 
-// TODO(Prakash): Implementation pending
-int Contact::Serialise(std::string * /*serialised*/) const {
+int Contact::Serialise(std::string * serialised) const {
+  protobuf::Contact pb_contact;
+  boost::system::error_code ec;
+
+  protobuf::Endpoint *mutable_endpoint = pb_contact.mutable_endpoint();
+  mutable_endpoint->set_ip(endpoint().ip.to_string(ec));
+  mutable_endpoint->set_port(endpoint().port);
+
+  if (IsValid(rendezvous_endpoint())) {
+    mutable_endpoint = pb_contact.mutable_rendezvous();
+    mutable_endpoint->set_ip(rendezvous_endpoint().ip.to_string(ec));
+    mutable_endpoint->set_port(rendezvous_endpoint().port);
+  }
+
+  std::vector<transport::Endpoint> local_endpoints(local_endpoints());
+  for (auto it = local_endpoints.begin(); it != local_endpoints.end(); ++it) {
+    pb_contact.add_local_ips((*it).ip.to_string(ec));
+    pb_contact.set_local_port((*it).port);
+  }
+  if (IsValid(tcp443endpoint()))
+    pb_contact.set_tcp443(true);
+  if (IsValid(tcp80endpoint()))
+    pb_contact.set_tcp80(true);
+  // TODO(Prakash): FIXME
+  if ((PreferredEndpoint().ip == rendezvous_endpoint().ip) ||
+      (PreferredEndpoint().ip == endpoint().ip))
+    pb_contact.set_prefer_local(false);
+  else
+    pb_contact.set_prefer_local(true);
+
+  pb_contact.set_node_id(node_id().String());
+  pb_contact.set_public_key_id(public_key_id());
+  std::string encode_pub_key;
+  asymm::EncodePublicKey(public_key(), &encode_pub_key);
+  pb_contact.set_public_key(encode_pub_key);
+  pb_contact.set_other_info(other_info());
+
+  if (!pb_contact.IsInitialized())
+    return kSerialisation;
+
+  if (!pb_contact.SerializeToString(serialised)) {
+    return kSerialisation;
+  }
   return kSuccess;
 }
 
-int Contact::Parse(const std::string & /*serialised*/) {
+int Contact::Parse(const std::string & serialised) {
+  protobuf::Contact pb_contact;
+  if (!pb_contact.ParseFromString(serialised)) {
+    Clear();
+    return kParse;
+  }
+  if (transport_details_.Parse(serialised) != kSuccess) {
+    Clear();
+    return kParse;
+  }
+  node_id_ = NodeId(pb_contact.node_id());
+
+  public_key_id_ =
+      pb_contact.has_public_key_id() ? pb_contact.public_key_id() : "";
+
+  asymm::PublicKey public_key;
+  if (pb_contact.has_public_key())
+    asymm::DecodePublicKey(pb_contact.public_key(), &public_key);
+  public_key_ = public_key;
+
+  other_info_ =
+      pb_contact.has_other_info() ? pb_contact.other_info() : "";
+
   return kSuccess;
 }
 
