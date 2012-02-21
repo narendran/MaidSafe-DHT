@@ -184,9 +184,9 @@ class Contact {  // : public transport::Contact {
   bool IpMatchesEndpoint(const transport::IP &ip,
                          const transport::Endpoint &endpoint);
   NodeId node_id_;
-  std::string other_info_;
-  asymm::PublicKey public_key_;
   asymm::Identity public_key_id_;
+  asymm::PublicKey public_key_;
+  std::string other_info_;
   transport::Contact transport_details_;
 };
 

@@ -97,48 +97,6 @@ void OptionDependency(const po::variables_map &variables_map,
   }
 }
 
-bool WriteBootstrapFile(std::vector<mk::Contact> * contacts,
-                        const std::string &filename) {
-  if (contacts == nullptr)
-    return false;
-  maidsafe::dht::protobuf::BootstrapContacts bootstrap_contacts;
-  for (size_t i = 0; i < contacts->size(); i++) {
-    maidsafe::dht::protobuf::Contact * pb_contact =
-        bootstrap_contacts.add_contact();
-    *pb_contact = maidsafe::dht::ToProtobuf(contacts->at(i));
-  }
-  {
-    // Write the new bootstrap contacts back to disk.
-    std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
-    if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
-      DLOG(WARNING) << "Failed to write bootstrap contacts.";
-      return false;
-    }
-  }
-  return true;
-}
-
-bool ReadBootstrapFile(std::vector<mk::Contact> * contacts,
-                       const std::string &filename) {
-  if (contacts == nullptr)
-    return false;
-  maidsafe::dht::protobuf::BootstrapContacts bootstrap_contacts;
-  {
-    // Read the existing bootstrap contacts.
-    std::ifstream ifs(filename);
-    if (!bootstrap_contacts.ParseFromIstream(&ifs)) {
-      DLOG(WARNING) << "Failed to parse bootstrap contacts.";
-      return false;
-    }
-  }
-  for (int i = 0; i < bootstrap_contacts.contact_size(); i++) {
-    maidsafe::dht::Contact contact =
-      maidsafe::dht::FromProtobuf(bootstrap_contacts.contact(i));
-    contacts->push_back(contact);
-  }
-  return true;
-}
-
 volatile bool ctrlc_pressed(false);
 
 void CtrlCHandler(int /*a*/) {
@@ -345,7 +303,7 @@ int main(int argc, char **argv) {
     bool first_node(variables_map["first_node"].as<bool>());
     std::vector<maidsafe::dht::Contact> bootstrap_contacts;
     if (!first_node) {
-      if (!ReadBootstrapFile(&bootstrap_contacts, bootstrap_file)) {
+      if (!ReadContactsFromFile(&bootstrap_contacts, bootstrap_file)) {
          return 1;
       }
       if (bootstrap_contacts.empty()) {
@@ -391,7 +349,7 @@ int main(int argc, char **argv) {
     if (first_node)
       demo_node->node()->GetBootstrapContacts(&bootstrap_contacts);
 
-    WriteBootstrapFile(&bootstrap_contacts, bootstrap_file);
+    WriteContactsToFile(&bootstrap_contacts, bootstrap_file);
 
     if (result != mk::kSuccess) {
       ULOG(ERROR) << "Node failed to join the network with return code "

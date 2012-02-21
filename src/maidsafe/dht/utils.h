@@ -67,6 +67,12 @@ bool StubValidate(const asymm::PlainText &plain_text,
                   const asymm::Signature &signature,
                   const asymm::PublicKey &public_key);
 
+bool WriteContactsToFile(std::vector<Contact> *contacts,
+                         const std::string &filename);
+
+bool ReadContactsFromFile(std::vector<Contact> *contacts,
+                          const std::string &filename);
+
 }  // namespace dht
 
 }  // namespace maidsafe

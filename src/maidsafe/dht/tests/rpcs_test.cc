@@ -735,7 +735,7 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
   AddTestValidation(this->service_key_pair_,
                     this->rpcs_contact_.node_id().String(),
                     public_key);
-  SetContactValidation(false);
+  this->SetContactValidation(false);
 
   // Malicious sender sends fake public_key
   this->rpcs_->Store(key, kvs.value, kvs.signature, ttl,
@@ -768,7 +768,7 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
   EXPECT_EQ(g_kKademliaK, return_contacts.size());
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
   this->StopAndReset();
-  SetContactValidation(true);
+  this->SetContactValidation(true);
 }
 
 TYPED_TEST_P(RpcsTest, FUNC_StoreMultipleRequest) {
