@@ -82,10 +82,9 @@ Commands::Commands(DemoNodePtr demo_node) : demo_node_(demo_node),
 void Commands::Run() {
   PrintUsage();
   while (!finish_) {
-    std::cout << "Enter command > ";
+    std::cout << std::endl << std::endl << "Enter command > ";
     std::string cmdline;
     std::getline(std::cin, cmdline);
-    ULOG(INFO) << "Entered: " << cmdline;
     {
       boost::mutex::scoped_lock lock(wait_mutex_);
       ProcessCommand(cmdline);
@@ -180,17 +179,30 @@ void Commands::FindValueCallback(FindValueReturns find_value_returns,
                          "contact(s).") %
                          find_value_returns.values_and_signatures.size() %
                          find_value_returns.closest_nodes.size();
-    ULOG(INFO)
-        << boost::format("Node holding value in its alternative_store: [ %1% ]")
-               % find_value_returns.alternative_store_holder.node_id().
-               ToStringEncoded(NodeId::kBase64);
-    ULOG(INFO)
-        << boost::format("Node needing a cache copy of the values: [ %1% ]")
-              % find_value_returns.needs_cache_copy.node_id().
-              ToStringEncoded(NodeId::kBase64);
+    if (find_value_returns.alternative_store_holder.node_id().String() !=
+        kZeroId) {
+      ULOG(INFO)
+          << boost::format(
+                 "Node holding value in its alternative_store: [ %1% ]")
+                 % find_value_returns.alternative_store_holder.node_id().
+                 ToStringEncoded(NodeId::kBase64);
+    }
+    if (find_value_returns.needs_cache_copy.node_id().String() !=
+        kZeroId) {
+      ULOG(INFO)
+          << boost::format("Node needing a cache copy of the values: [ %1% ]")
+                % find_value_returns.needs_cache_copy.node_id().
+                ToStringEncoded(NodeId::kBase64);
+    }
     // Writing only 1st value
-    if (!find_value_returns.values_and_signatures.empty() && !path.empty())
-      WriteFile(path, find_value_returns.values_and_signatures[0].first);
+    if (!find_value_returns.values_and_signatures.empty()) {
+      if (path.empty()) {
+        std::string value(find_value_returns.values_and_signatures[0].first);
+        ULOG(INFO) << "Value: " << value;
+      } else {
+        WriteFile(path, find_value_returns.values_and_signatures[0].first);
+      }
+    }
   }
   demo_node_->asio_service().post(mark_results_arrived_);
 }
@@ -341,6 +353,11 @@ void Commands::PrintUsage() {
 }
 
 void Commands::ProcessCommand(const std::string &cmdline) {
+  if (cmdline.empty()) {
+    demo_node_->asio_service().post(mark_results_arrived_);
+    return;
+  }
+
   std::string cmd;
   Arguments args;
   try {
