@@ -240,11 +240,11 @@ OrderedContacts CreateOrderedContacts(InputIterator first,
 }
 
 
-bool WriteContactsToFile(std::vector<Contact> *contacts,
-                         const std::string &filename);
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> *contacts);
 
-bool ReadContactsFromFile(std::vector<Contact> *contacts,
-                          const std::string &filename);
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts);
 
 }  // namespace dht
 

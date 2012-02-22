@@ -301,9 +301,10 @@ int main(int argc, char **argv) {
 
     // Set up DemoNode
     bool first_node(variables_map["first_node"].as<bool>());
+    fs::path bootstrap_file_path(bootstrap_file);
     std::vector<maidsafe::dht::Contact> bootstrap_contacts;
     if (!first_node) {
-      if (!ReadContactsFromFile(&bootstrap_contacts, bootstrap_file)) {
+      if (!ReadContactsFromFile(bootstrap_file_path, &bootstrap_contacts)) {
          return 1;
       }
       if (bootstrap_contacts.empty()) {
@@ -349,7 +350,7 @@ int main(int argc, char **argv) {
     if (first_node)
       demo_node->node()->GetBootstrapContacts(&bootstrap_contacts);
 
-    WriteContactsToFile(&bootstrap_contacts, bootstrap_file);
+    WriteContactsToFile(bootstrap_file_path, &bootstrap_contacts);
 
     if (result != mk::kSuccess) {
       ULOG(ERROR) << "Node failed to join the network with return code "

@@ -292,8 +292,8 @@ bool RemoveContact(const NodeId &node_id, std::vector<Contact> *contacts) {
   return contacts->size() != size_before;
 }
 
-bool WriteContactsToFile(std::vector<Contact> *contacts,
-                         const std::string &filename) {
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> *contacts) {
   if (contacts == nullptr)
     return false;
   protobuf::BootstrapContacts bootstrap_contacts;
@@ -303,7 +303,7 @@ bool WriteContactsToFile(std::vector<Contact> *contacts,
   }
   {
     // Write the new bootstrap contacts back to disk.
-    std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
+    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::trunc);
     if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
       DLOG(WARNING) << "Failed to write bootstrap contacts.";
       return false;
@@ -312,16 +312,16 @@ bool WriteContactsToFile(std::vector<Contact> *contacts,
   return true;
 }
 
-bool ReadContactsFromFile(std::vector<Contact> *contacts,
-                          const std::string &filename) {
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts) {
   if (contacts == nullptr)
     return false;
   protobuf::BootstrapContacts bootstrap_contacts;
   {
     // Read the existing bootstrap contacts.
-    std::ifstream ifs(filename);
+    std::ifstream ifs(filename.c_str());
     if (!ifs.is_open()) {
-      DLOG(WARNING) << "Failed to open file : " <<  filename;
+      DLOG(WARNING) << "Failed to open file : " <<  filename.string();
       return false;
     }
     if (!bootstrap_contacts.ParseFromIstream(&ifs)) {

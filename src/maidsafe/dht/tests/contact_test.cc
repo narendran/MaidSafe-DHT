@@ -525,7 +525,7 @@ TEST_F(ContactTest, BEH_ContactSerializationFileOperations) {
   fs::path file_path = fs::temp_directory_path() / path;
   fs::create_directories(file_path, error_code);
   ASSERT_EQ(0, error_code.value());
-  std::string file(file_path.string() + "/contacts.xml");
+  fs::path file(file_path.string() + "/contacts.xml");
 
   transport::Endpoint endpoint1("192.168.1.48", 8891);
   transport::Endpoint endpoint2("192.168.1.44", 8896);
@@ -543,10 +543,10 @@ TEST_F(ContactTest, BEH_ContactSerializationFileOperations) {
   std::vector<maidsafe::dht::Contact> contacts;
   contacts.push_back(contact1);
   contacts.push_back(contact2);
-  EXPECT_TRUE(WriteContactsToFile(&contacts, file));
+  EXPECT_TRUE(WriteContactsToFile(file, &contacts));
   contacts.clear();
   ASSERT_EQ(0U, contacts.size());
-  EXPECT_TRUE(ReadContactsFromFile(&contacts, file));
+  EXPECT_TRUE(ReadContactsFromFile(file, &contacts));
   ASSERT_EQ(2U, contacts.size());
   EXPECT_EQ(contacts.at(0), contact1);
   EXPECT_EQ(contacts.at(1), contact2);
