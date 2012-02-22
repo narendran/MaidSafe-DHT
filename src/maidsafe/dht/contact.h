@@ -239,6 +239,12 @@ OrderedContacts CreateOrderedContacts(InputIterator first,
                 args::_1, args::_2, target));
 }
 
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> *contacts);
+
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts);
+
 }  // namespace dht
 
 }  // namespace maidsafe

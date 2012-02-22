@@ -36,6 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __MSVC__
 #  pragma warning(pop)
 #endif
+#include "maidsafe/dht/log.h"
 #include "maidsafe/dht/utils.h"
 
 namespace maidsafe {
@@ -289,6 +290,50 @@ bool RemoveContact(const NodeId &node_id, std::vector<Contact> *contacts) {
                                  std::bind(&HasId, args::_1, node_id)),
                   contacts->end());
   return contacts->size() != size_before;
+}
+
+bool WriteContactsToFile(const fs::path &filename,
+                         std::vector<Contact> *contacts) {
+  if (contacts == nullptr)
+    return false;
+  protobuf::BootstrapContacts bootstrap_contacts;
+  for (size_t i = 0; i < contacts->size(); i++) {
+    protobuf::Contact * pb_contact = bootstrap_contacts.add_contact();
+    *pb_contact = ToProtobuf(contacts->at(i));
+  }
+  {
+    // Write the new bootstrap contacts back to disk.
+    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::trunc);
+    if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
+      DLOG(WARNING) << "Failed to write bootstrap contacts.";
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ReadContactsFromFile(const fs::path &filename,
+                          std::vector<Contact> *contacts) {
+  if (contacts == nullptr)
+    return false;
+  protobuf::BootstrapContacts bootstrap_contacts;
+  {
+    // Read the existing bootstrap contacts.
+    std::ifstream ifs(filename.c_str());
+    if (!ifs.is_open()) {
+      DLOG(WARNING) << "Failed to open file : " <<  filename.string();
+      return false;
+    }
+    if (!bootstrap_contacts.ParseFromIstream(&ifs)) {
+      DLOG(WARNING) << "Failed to parse bootstrap contacts.";
+      return false;
+    }
+  }
+  for (int i = 0; i < bootstrap_contacts.contact_size(); i++) {
+    Contact contact = FromProtobuf(bootstrap_contacts.contact(i));
+    contacts->push_back(contact);
+  }
+  return true;
 }
 
 }  // namespace dht
