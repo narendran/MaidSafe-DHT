@@ -148,8 +148,8 @@ void NodeImpl::Join(const NodeId &node_id,
   }
 
   if (!rpcs_) {
-    rpcs_.reset(new Rpcs<transport::RudpTransport>(asio_service_,
-                                                   default_private_key_));
+    rpcs_.reset(new Rpcs<transport::TcpTransport>(asio_service_,
+                                                  default_private_key_));
   }
   // TODO(Fraser#5#): 2011-07-08 - Need to update code for local endpoints.
   if (!client_only_node_) {
