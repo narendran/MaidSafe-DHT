@@ -159,12 +159,20 @@ ELSE()
 ENDIF()
 ADD_DEPENDENCIES(install_fast maidsafe_dht_static)
 
+IF(NOT APPLE)
 TARGET_LINK_LIBRARIES(maidsafe_dht_static
                         maidsafe_transport_static
                         maidsafe_common_static
                         breakpad_static
                         boost_date_time
                         boost_regex)
+ELSE()
+TARGET_LINK_LIBRARIES(maidsafe_dht_static
+                        maidsafe_transport_static
+                        maidsafe_common_static
+                        boost_date_time
+                        boost_regex)
+ENDIF()
 TARGET_LINK_LIBRARIES(TESTkademlia maidsafe_dht_static gmock_static)
 TARGET_LINK_LIBRARIES(TESTnode_functional maidsafe_dht_static gtest_static)
 TARGET_LINK_LIBRARIES(TESTnode_impl_functional maidsafe_dht_static gtest_static)

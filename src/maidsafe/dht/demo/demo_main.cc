@@ -28,14 +28,12 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <signal.h>
 #include "boost/filesystem.hpp"
 #include "boost/program_options.hpp"
-#include "boost/archive/xml_iarchive.hpp"
-#include "boost/archive/xml_oarchive.hpp"
-#include "boost/archive/text_oarchive.hpp"
-#include "boost/archive/text_iarchive.hpp"
 
+#ifndef __APPLE__
+  #include "maidsafe/common/breakpad.h"
+#endif
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
-#include "maidsafe/common/breakpad.h"
 
 #ifdef __MSVC__
 #  pragma warning(push)
@@ -45,16 +43,16 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef __MSVC__
 #  pragma warning(pop)
 #endif
-#include "maidsafe/dht/log.h"
-#include "maidsafe/dht/version.h"
 #include "maidsafe/dht/config.h"
 #include "maidsafe/dht/contact.h"
-#include "maidsafe/dht/return_codes.h"
-#include "maidsafe/dht/node_id.h"
+#include "maidsafe/dht/demo/commands.h"
+#include "maidsafe/dht/log.h"
 #include "maidsafe/dht/node-api.h"
 #include "maidsafe/dht/node_container.h"
-#include "maidsafe/dht/demo/commands.h"
+#include "maidsafe/dht/node_id.h"
+#include "maidsafe/dht/return_codes.h"
 #include "maidsafe/dht/utils.h"
+#include "maidsafe/dht/version.h"
 
 
 namespace bptime = boost::posix_time;
@@ -170,6 +168,7 @@ void validate(boost::any& v, const std::vector<std::string>& values,
 
 int main(int argc, char **argv) {
   maidsafe::InitLogging(argv[0]);
+#ifndef __APPLE__
   fs::path cur_path = fs::initial_path();
   maidsafe::crash_report::ProjectInfo current_project("MaidSafe-DHT",
                         boost::lexical_cast<std::string>(MAIDSAFE_DHT_VERSION));
@@ -185,6 +184,7 @@ int main(int argc, char **argv) {
                                         maidsafe::crash_report::DumpCallback,
                                         &current_project,
                                         true);
+#endif
 #endif
   try {
     PortRange port_range(8000, 65535);
