@@ -302,6 +302,10 @@ int main(int argc, char **argv) {
     // Set up DemoNode
     bool first_node(variables_map["first_node"].as<bool>());
     fs::path bootstrap_file_path(bootstrap_file);
+    if (variables_map.count("bootstrap")) {
+      bootstrap_file_path =
+          fs::path(variables_map["bootstrap"].as<std::string>());
+    }
     std::vector<maidsafe::dht::Contact> bootstrap_contacts;
     if (!first_node) {
       if (!ReadContactsFromFile(bootstrap_file_path, &bootstrap_contacts)) {
