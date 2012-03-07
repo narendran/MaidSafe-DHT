@@ -46,6 +46,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/transport/transport.h"
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/dht/log.h"
 // #include "maidsafe-dht/common/routing_table.h"
@@ -106,6 +107,7 @@ class NodeTest : public testing::Test {
   const bptime::time_duration kTimeout_;
   size_t chosen_node_index_;
   NodeContainerPtr chosen_container_;
+
  private:
   NodeTest(const NodeTest&);
   NodeTest& operator=(const NodeTest&);
@@ -130,7 +132,10 @@ TEST_F(NodeTest, FUNC_Ping) {
   EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
               chosen_container_->wait_for_ping_functor()));
   chosen_container_->GetAndResetPingResult(&result);
-  EXPECT_EQ(transport::kReceiveFailure, result);
+
+  //  Modifying test for rudp
+  EXPECT_NE(transport::kSuccess, result);
+//  EXPECT_EQ(transport::kReceiveFailure, result);
 }
 
 TEST_F(NodeTest, FUNC_Bootstrap) {
@@ -222,7 +227,11 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   bootstrap_contacts = offline_contacts;
   bootstrap_contacts.insert(bootstrap_contacts.begin(),
                             node_container->node()->contact());
-  EXPECT_EQ(kContactFailedToRespond,
+  //  Modifying test for rudp
+  //  EXPECT_EQ(kContactFailedToRespond,
+  //            node_container->Start(bootstrap_contacts,
+  //                                  std::make_pair(1025U, 65535U)));
+  EXPECT_NE(kSuccess,
             node_container->Start(bootstrap_contacts,
                                   std::make_pair(1025U, 65535U)));
   EXPECT_FALSE(node_container->node()->joined());

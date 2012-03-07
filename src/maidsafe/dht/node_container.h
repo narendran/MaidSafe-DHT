@@ -41,7 +41,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/crypto.h"
 
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/tcp_transport.h"
+#include "maidsafe/transport/udp_transport.h"
 // TODO(Fraser#5#): 2011-08-30 - remove #include utils.h once NAT detection is
 //                  implemented.
 #include "maidsafe/transport/utils.h"
@@ -387,6 +389,8 @@ void NodeContainer<NodeType>::Init(
   // incoming raw messages.  Don't need to connect to on_error() as service
   // doesn't care if reply succeeds or not.
   if (!client_only_node) {
+//    listening_transport_.reset(
+//        new transport::TcpTransport(asio_service_.service()));
     listening_transport_.reset(
         new transport::TcpTransport(asio_service_.service()));
     listening_transport_->on_message_received()->connect(

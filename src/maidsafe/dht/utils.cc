@@ -29,6 +29,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/transport/transport.h"
 
+#include "maidsafe/dht/log.h"
 #include "maidsafe/dht/utils.h"
 #include "maidsafe/dht/contact.h"
 #ifdef __MSVC__
@@ -48,10 +49,6 @@ namespace maidsafe {
 using transport::Endpoint;
 
 namespace dht {
-
-bool IsValid(const Endpoint &endpoint) {
-  return !(endpoint.ip == transport::IP() || endpoint.port == 0);
-}
 
 bool HasId(const Contact &contact, const NodeId &node_id) {
   return contact.node_id() == node_id;
@@ -155,6 +152,7 @@ bool StubValidate(const asymm::PlainText &plain_text,
   else
     return true;
 }
+
 
 }  // namespace dht
 

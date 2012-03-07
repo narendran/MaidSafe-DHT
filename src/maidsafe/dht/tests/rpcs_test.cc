@@ -37,6 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/tcp_transport.h"
 #include "maidsafe/transport/udp_transport.h"
 #include "maidsafe/dht/config.h"
@@ -119,7 +120,8 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
         local_asio_(),
         rank_info_(),
         contacts_(),
-        transport_() {
+        transport_(),
+        handler_() {
     asio_service_.Start(3);
     local_asio_.Start(3);
   }
@@ -290,6 +292,29 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   void StopAndReset() {
     asio_service_.Stop();
     local_asio_.Stop();
+  }
+
+  void SetContactValidation(bool validated) {
+    if (validated)
+      service_->set_contact_validator(std::bind(
+          &RpcsTest::StubContactValidatorTrue, this, args::_1, args::_2,
+          args::_3));
+    else
+      service_->set_contact_validator(std::bind(
+          &RpcsTest::StubContactValidatorFalse, this, args::_1, args::_2,
+          args::_3));
+  }
+
+  bool StubContactValidatorFalse(asymm::Identity /*identity*/,
+                                 asymm::PublicKey /*public_key*/,
+                                 asymm::ValidationToken /*validation_token*/) {
+    return false;
+  }
+
+  bool StubContactValidatorTrue(asymm::Identity /*identity*/,
+                                asymm::PublicKey /*public_key*/,
+                                asymm::ValidationToken /*validation_token*/) {
+    return true;
   }
 
  protected:
@@ -710,6 +735,8 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
   AddTestValidation(this->service_key_pair_,
                     this->rpcs_contact_.node_id().String(),
                     public_key);
+  this->SetContactValidation(false);
+
   // Malicious sender sends fake public_key
   this->rpcs_->Store(key, kvs.value, kvs.signature, ttl,
                      GetPrivateKeyPtr(this->rpcs_key_pair_),
@@ -741,6 +768,7 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
   EXPECT_EQ(g_kKademliaK, return_contacts.size());
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
   this->StopAndReset();
+  this->SetContactValidation(true);
 }
 
 TYPED_TEST_P(RpcsTest, FUNC_StoreMultipleRequest) {
@@ -1561,7 +1589,8 @@ REGISTER_TYPED_TEST_CASE_P(RpcsTest,
                            FUNC_DeleteRefreshMultipleRequests,
                            FUNC_DifferentSecurifier);
 
-typedef ::testing::Types<transport::TcpTransport,
+typedef ::testing::Types<transport::RudpTransport,
+                         transport::TcpTransport,
                          transport::UdpTransport> TransportTypes;
 INSTANTIATE_TYPED_TEST_CASE_P(TheRpcTests, RpcsTest, TransportTypes);
 

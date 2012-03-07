@@ -43,6 +43,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/utils.h"
 #include "maidsafe/common/crypto.h"
 
+#include "maidsafe/transport/rudp_transport.h"
 #include "maidsafe/transport/transport.h"
 #include "maidsafe/transport/utils.h"
 
@@ -149,13 +150,18 @@ class MockTransport : public transport::Transport {
     return transport::kSuccess;
   }
   virtual transport::TransportCondition Bootstrap(
-      const std::vector<transport::Endpoint> &/*candidates*/) {
+      const std::vector<transport::Endpoint> &) {
     return transport::kSuccess;
   }
   virtual void StopListening() { listening_port_ = 0; }
   virtual void Send(const std::string &/*data*/,
                     const transport::Endpoint &/*endpoint*/,
                     const transport::Timeout &/*timeout*/) {}
+  virtual transport::TransportCondition Bootstrap(
+      const std::vector<transport::Contact> &) {
+    return transport::kSuccess;
+  }
+
  private:
   boost::asio::io_service io_service_;
 };
@@ -814,7 +820,7 @@ TEST_F(MockNodeImplTest, BEH_PingOldestContact) {
 
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
       new MockRpcs<transport::TcpTransport>(asio_service_.service(),
-                                            private_key_));
+                                             private_key_));
   new_rpcs->set_node_id(node_id_);
   SetLocalRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -863,7 +869,7 @@ TEST_F(MockNodeImplTest, BEH_Join) {
   std::vector<Contact> bootstrap_contacts;
   std::shared_ptr<MockRpcs<transport::TcpTransport>> new_rpcs(
       new MockRpcs<transport::TcpTransport>(asio_service_.service(),
-                                            private_key_));
+                                             private_key_));
   new_rpcs->set_node_id(node_id_);
   SetRpcs<transport::TcpTransport>(new_rpcs);
 
@@ -1203,7 +1209,7 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
     EXPECT_CALL(*new_rpcs, FindNodes(testing::_, testing::_, testing::_,
                                      testing::_, testing::_))
         .WillRepeatedly(testing::WithArgs<4>(testing::Invoke(
-            std::bind(&MockRpcs<transport::TcpTransport>::FindNodeResponseClose,
+            std::bind(&MockRpcs<transport::TcpTransport>::FindNodeResponseClose,  //NOLINT
                       new_rpcs.get(), args::_1))));
     std::vector<Contact> lcontacts;
     node_->FindNodes(target,

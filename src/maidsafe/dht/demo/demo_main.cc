@@ -37,6 +37,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/common/utils.h"
 #include "maidsafe/common/breakpad.h"
 
+#ifdef __MSVC__
+#  pragma warning(push)
+#  pragma warning(disable: 4127 4244 4267)
+#endif
+#include "maidsafe/dht/kademlia.pb.h"
+#ifdef __MSVC__
+#  pragma warning(pop)
+#endif
 #include "maidsafe/dht/log.h"
 #include "maidsafe/dht/version.h"
 #include "maidsafe/dht/config.h"
@@ -46,6 +54,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/node-api.h"
 #include "maidsafe/dht/node_container.h"
 #include "maidsafe/dht/demo/commands.h"
+#include "maidsafe/dht/utils.h"
 
 
 namespace bptime = boost::posix_time;
@@ -86,33 +95,6 @@ void OptionDependency(const po::variables_map &variables_map,
                              + "' requires option '" + required_option + "'.");
     }
   }
-}
-
-bool WriteBootstrapFile(std::vector<mk::Contact> *bootstrap_contacts,
-                        const std::string &filename) {
-  try {
-    std::ofstream ofs(filename);
-    boost::archive::xml_oarchive oa(ofs);
-    boost::serialization::serialize(oa, *bootstrap_contacts, 0);
-    DLOG(INFO) << "Updated bootstrap info.";
-  } catch(const std::exception &e) {
-    DLOG(WARNING) << "Exception: " << e.what();
-    return false;
-  }
-  return true;
-}
-
-bool ReadBootstrapFile(std::vector<mk::Contact> *bootstrap_contacts,
-                       const std::string &filename) {
-  try {
-    std::ifstream ifs(filename);
-    boost::archive::xml_iarchive ia(ifs);
-    boost::serialization::serialize(ia, *bootstrap_contacts, 0);
-  } catch(const std::exception &e) {
-    DLOG(WARNING) << "Exception: " << e.what();
-    return false;
-  }
-  return true;
 }
 
 volatile bool ctrlc_pressed(false);
@@ -206,7 +188,7 @@ int main(int argc, char **argv) {
 #endif
   try {
     PortRange port_range(8000, 65535);
-    std::string logfile, bootstrap_file("bootstrap_contacts.xml");
+    std::string logfile, bootstrap_file("bootstrap_contacts");
     uint16_t k(4), alpha(3), beta(2);
     std::string ip("127.0.0.1");
     uint32_t refresh_interval(3600);
@@ -319,9 +301,14 @@ int main(int argc, char **argv) {
 
     // Set up DemoNode
     bool first_node(variables_map["first_node"].as<bool>());
+    fs::path bootstrap_file_path(bootstrap_file);
+    if (variables_map.count("bootstrap")) {
+      bootstrap_file_path =
+          fs::path(variables_map["bootstrap"].as<std::string>());
+    }
     std::vector<maidsafe::dht::Contact> bootstrap_contacts;
     if (!first_node) {
-      if (!ReadBootstrapFile(&bootstrap_contacts, bootstrap_file)) {
+      if (!ReadContactsFromFile(bootstrap_file_path, &bootstrap_contacts)) {
          return 1;
       }
       if (bootstrap_contacts.empty()) {
@@ -367,7 +354,7 @@ int main(int argc, char **argv) {
     if (first_node)
       demo_node->node()->GetBootstrapContacts(&bootstrap_contacts);
 
-    WriteBootstrapFile(&bootstrap_contacts, bootstrap_file);
+    WriteContactsToFile(bootstrap_file_path, &bootstrap_contacts);
 
     if (result != mk::kSuccess) {
       ULOG(ERROR) << "Node failed to join the network with return code "
