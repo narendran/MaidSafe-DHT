@@ -303,7 +303,7 @@ bool WriteContactsToFile(const fs::path &filename,
   }
   {
     // Write the new bootstrap contacts back to disk.
-    std::ofstream ofs(filename.c_str(), std::ios::out | std::ios::trunc);
+    std::ofstream ofs(filename.c_str(), std::ios::binary | std::ios::trunc);
     if (!bootstrap_contacts.SerializeToOstream(&ofs)) {
       DLOG(WARNING) << "Failed to write bootstrap contacts.";
       return false;
@@ -319,7 +319,7 @@ bool ReadContactsFromFile(const fs::path &filename,
   protobuf::BootstrapContacts bootstrap_contacts;
   {
     // Read the existing bootstrap contacts.
-    std::ifstream ifs(filename.c_str());
+    std::ifstream ifs(filename.c_str(), std::ios::binary);
     if (!ifs.is_open()) {
       DLOG(WARNING) << "Failed to open file : " <<  filename.string();
       return false;

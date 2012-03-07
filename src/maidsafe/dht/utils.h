@@ -67,7 +67,6 @@ bool StubValidate(const asymm::PlainText &plain_text,
                   const asymm::Signature &signature,
                   const asymm::PublicKey &public_key);
 
-
 }  // namespace dht
 
 }  // namespace maidsafe
