@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/common/test.h"
 #include "maidsafe/common/asio_service.h"
-#include "maidsafe/common/alternative_store.h"
 #include "maidsafe/common/crypto.h"
 #include "maidsafe/common/utils.h"
 #include "maidsafe/transport/transport.h"
@@ -100,29 +99,6 @@ class MockTransportServiceTest : public transport::Transport {
   }
 };
 
-class AlternativeStoreTrue: public AlternativeStore {
- public:
-  virtual ~AlternativeStoreTrue() {}
-  virtual bool Has(
-      const std::string&,
-      const ValidationData& = ValidationData()) const {
-    return true;
-  }
-};
-
-class AlternativeStoreFalse: public AlternativeStore {
- public:
-  virtual ~AlternativeStoreFalse() {}
-  virtual bool Has(
-      const std::string&,
-      const ValidationData& = ValidationData()) const {
-    return false;
-  }
-};
-
-typedef std::shared_ptr<AlternativeStoreTrue> AlternativeStoreTruePtr;
-typedef std::shared_ptr<AlternativeStoreFalse> AlternativeStoreFalsePtr;
-
 class ServicesTest: public CreateContactAndNodeId, public testing::Test {
  public:
   ServicesTest()
@@ -131,11 +107,10 @@ class ServicesTest: public CreateContactAndNodeId, public testing::Test {
         node_id_(NodeId::kRandomId),
         data_store_(new DataStore(bptime::seconds(3600))),
         routing_table_(new RoutingTable(node_id_, g_kKademliaK)),
-        alternative_store_(),
         key_pair_(new asymm::Keys()),
         info_(),
         rank_info_(),
-        service_(new Service(routing_table_, data_store_, alternative_store_,
+        service_(new Service(routing_table_, data_store_,
                              GetPrivateKeyPtr(key_pair_), g_kKademliaK)),
         num_of_pings_(0) {
     service_->set_node_joined(true);
@@ -349,7 +324,6 @@ class ServicesTest: public CreateContactAndNodeId, public testing::Test {
   NodeId node_id_;
   std::shared_ptr<DataStore> data_store_;
   std::shared_ptr<RoutingTable> routing_table_;
-  AlternativeStorePtr alternative_store_;
   KeyPairPtr key_pair_;
   transport::Info info_;
   RankInfoPtr rank_info_;
@@ -359,13 +333,12 @@ class ServicesTest: public CreateContactAndNodeId, public testing::Test {
 
 
 TEST_F(ServicesTest, BEH_Constructor) {
-  Service service(routing_table_, data_store_, alternative_store_,
-                  GetPrivateKeyPtr(key_pair_),
+  Service service(routing_table_, data_store_, GetPrivateKeyPtr(key_pair_),
                   g_kKademliaK);
   CheckServiceConstructAttributes(service, 16U);
 
-  Service service_k(routing_table_, data_store_, alternative_store_,
-                    GetPrivateKeyPtr(key_pair_), 2U);
+  Service service_k(routing_table_, data_store_, GetPrivateKeyPtr(key_pair_),
+                    2U);
   CheckServiceConstructAttributes(service_k, 2U);
 }
 
@@ -418,7 +391,7 @@ TEST_F(ServicesTest, BEH_Store) {
     key_pair.identity = sender.public_key_id();
     key_pair.public_key = sender.public_key();
     KeyPairPtr key_pair_local(new asymm::Keys(key_pair));
-    Service service(routing_table_, data_store_, alternative_store_,
+    Service service(routing_table_, data_store_,
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
@@ -544,7 +517,7 @@ TEST_F(ServicesTest, BEH_Delete) {
     key_pair.identity = sender.public_key_id();
     key_pair.public_key = sender.public_key();
     KeyPairPtr key_pair_local(new asymm::Keys(key_pair));
-    Service service(routing_table_, data_store_, alternative_store_,
+    Service service(routing_table_, data_store_,
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
@@ -671,7 +644,7 @@ TEST_F(ServicesTest, FUNC_StoreRefresh) {
     key_pair.identity = sender.public_key_id();
     key_pair.public_key = sender.public_key();
     KeyPairPtr key_pair_local(new asymm::Keys(key_pair));
-    Service service(routing_table_, data_store_, alternative_store_,
+    Service service(routing_table_, data_store_,
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
@@ -801,7 +774,7 @@ TEST_F(ServicesTest, FUNC_DeleteRefresh) {
     key_pair.identity = sender.public_key_id();
     key_pair.public_key = sender.public_key();
     KeyPairPtr key_pair_local(new asymm::Keys(key_pair));
-    Service service(routing_table_, data_store_, alternative_store_,
+    Service service(routing_table_, data_store_,
                     GetPrivateKeyPtr(key_pair_local), g_kKademliaK);
     service.set_node_joined(true);
     service.set_contact_validation_getter(std::bind(
@@ -1067,7 +1040,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   Clear();
   {
     // Search in empty routing table and datastore
-    // no alternative_store_
+    // Not a cached copy holder
     protobuf::FindValueResponse find_value_rsp;
     service_->FindValue(info_, find_value_req, &find_value_rsp, &time_out);
     ASSERT_TRUE(find_value_rsp.result());
@@ -1079,7 +1052,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   {
     // Search in empty datastore
     // but with 2*k+1 populated routing table (containing the key)
-    // no alternative_store_
+    // Not a cached copy holder
     PopulateRoutingTable(g_kKademliaK, 500);
     PopulateRoutingTable(g_kKademliaK, 501);
     AddContact(routing_table_, target, rank_info_);
@@ -1103,7 +1076,8 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   Clear();
   {
     // Search in empty datastore with 2*k populated routing table
-    // no alternative_store_,  where num_nodes_requested < g_kKademliaK.
+    // Not a cached copy holder
+    // num_nodes_requested < g_kKademliaK.
     // The response should contain g_kKademliaK contacts.
     PopulateRoutingTable(g_kKademliaK, 500);
     PopulateRoutingTable(g_kKademliaK, 501);
@@ -1119,8 +1093,9 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   Clear();
 
   {
-    // Search in empty datastore with 2*k populated routing table no
-    // alternative_store_, where num_nodes_requested > g_kKademliaK.
+    // Search in empty datastore with 2*k populated routing table
+    // Not a cached copy holder
+    // num_nodes_requested > g_kKademliaK.
     // The response should contain num_nodes_requested contacts.
     PopulateRoutingTable(g_kKademliaK, 500);
     PopulateRoutingTable(g_kKademliaK, 501);
@@ -1138,7 +1113,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   {
     // Search in k populated datastore (not containing the target)
     // but with an empty routing table
-    // no alternative_store_
+    // Not a cached copy holder
     PopulateDataStore(g_kKademliaK);
     ASSERT_EQ(g_kKademliaK, GetDataStoreSize());
 
@@ -1161,7 +1136,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
   {
     // Search in K+1 populated datastore (containing the target)
     // with empty routing table
-    // no alternative_store_
+    // Not a cached copy holder
     PopulateDataStore(g_kKademliaK);
     EXPECT_EQ(kSuccess,
               data_store_->StoreValue(target_kvt.key_value_signature,
@@ -1180,50 +1155,22 @@ TEST_F(ServicesTest, FUNC_FindValue) {
     ASSERT_EQ(1U, CountUnValidatedContacts());
   }
   Clear();
-  {
-    // Search in k populated datastore (not containing the target)
-    // with empty routing table
-    // with alternative_store_ (not containing the target)
-    PopulateDataStore(g_kKademliaK);
-    ASSERT_EQ(g_kKademliaK, GetDataStoreSize());
-
-    AlternativeStoreFalsePtr
-        alternative_store_false_ptr(new AlternativeStoreFalse());
-    Service service(routing_table_, data_store_, alternative_store_false_ptr,
-                    GetPrivateKeyPtr(key_pair_), g_kKademliaK);
-    service.set_node_joined(true);
-    service.set_contact_validation_getter(std::bind(
-        &DummyContactValidationGetter, args::_1, args::_2));
-
-    find_value_req.set_key(target_key);
-    protobuf::FindValueResponse find_value_rsp;
-    service.FindValue(info_, find_value_req, &find_value_rsp, &time_out);
-    ASSERT_TRUE(find_value_rsp.result());
-    ASSERT_EQ(0U, find_value_rsp.mutable_signed_values()->size());
-    ASSERT_EQ(Contact(),
-        FromProtobuf((*find_value_rsp.mutable_alternative_value_holder())));
-    ASSERT_EQ(0U, find_value_rsp.closest_nodes_size());
-    ASSERT_EQ(0U, GetRoutingTableSize());
-    ASSERT_EQ(1U, CountUnValidatedContacts());
-  }
-  Clear();
 
   Contact node_contact = ComposeContact(node_id_, 5000);
   {
     // Search in k populated datastore (not containing the target)
     // with empty routing table
-    // with alternative_store_ (containing the target)
+    // Is a cached copy holder
     PopulateDataStore(g_kKademliaK);
     ASSERT_EQ(g_kKademliaK, GetDataStoreSize());
 
-    AlternativeStoreTruePtr
-        alternative_store_true_ptr(new AlternativeStoreTrue());
-    Service service(routing_table_, data_store_, alternative_store_true_ptr,
+    Service service(routing_table_, data_store_,
                     GetPrivateKeyPtr(key_pair_), g_kKademliaK);
     service.set_node_joined(true);
     service.set_node_contact(node_contact);
     service.set_contact_validation_getter(std::bind(
         &DummyContactValidationGetter, args::_1, args::_2));
+    service.set_check_cache_functor([](const std::string&) { return true; });  // NOLINT (Fraser)
 
     find_value_req.set_key(target_key);
     protobuf::FindValueResponse find_value_rsp;
@@ -1231,7 +1178,7 @@ TEST_F(ServicesTest, FUNC_FindValue) {
     ASSERT_TRUE(find_value_rsp.result());
     ASSERT_EQ(0U, find_value_rsp.mutable_signed_values()->size());
     ASSERT_EQ(node_contact,
-        FromProtobuf((*find_value_rsp.mutable_alternative_value_holder())));
+              FromProtobuf((*find_value_rsp.mutable_cached_copy_holder())));
     ASSERT_EQ(0U, find_value_rsp.closest_nodes_size());
     ASSERT_EQ(0U, GetRoutingTableSize());
     ASSERT_EQ(1U, CountUnValidatedContacts());
@@ -1396,25 +1343,7 @@ TEST_F(ServicesTest, FUNC_MultipleStoreRequests) {
   Clear();
 
   // Store request for same key from different senders
-  // Case 2: key not present in datastore, valid sender calls after invalid
-  // Invalid request recieves true but value doesn't get stored
-  EXPECT_TRUE(DoStore(sender_id_2, k1_v2, crypto_key_data_2));
-  EXPECT_FALSE(DoStore(sender_id_3, k1_v3, crypto_key_data_3));
-  // If the valid sender calls just after invalid sender it could fail
-  int attempts(0);
-  bool succeeded(DoStore(sender_id_1, k1_v1, crypto_key_data_1));
-  while (attempts != 100 && !succeeded) {
-    Sleep(bptime::milliseconds(10));
-    succeeded = DoStore(sender_id_1, k1_v1, crypto_key_data_1);
-    ++attempts;
-  }
-  EXPECT_TRUE(succeeded);
-  Sleep(kNetworkDelay * 2);
-  EXPECT_EQ(1U, GetDataStoreSize());
-  Clear();
-
-  // Store request for same key from different senders
-  // Case 3: key not present in datastore, valid sender calls first
+  // Case 2: key not present in datastore, valid sender calls first
   // If the valid sender calls store first, other senders recieves false
   EXPECT_TRUE(DoStore(sender_id_1, k1_v1, crypto_key_data_1));
   EXPECT_FALSE(DoStore(sender_id_2, k1_v2, crypto_key_data_2));

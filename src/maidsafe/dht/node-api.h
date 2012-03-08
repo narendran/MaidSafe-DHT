@@ -76,10 +76,6 @@ class Node {
   // securifer is passed, if it is invalid, this default_securifier will be used
   // instead.
   //
-  // alternative_store can be used to augment / complement the native Kademlia
-  // datastore of <key,values>.  If alternative_store is an invalid pointer, no
-  // default is instantiated, and all values are held in memory in datastore.
-  //
   // client_only_node specifies whether the node should be treated as a client
   // on the network rather than a full peer.  In client mode, the node does not
   // accept store requests and is not added to other nodes' routing tables.
@@ -95,7 +91,6 @@ class Node {
        TransportPtr listening_transport,
        MessageHandlerPtr message_handler,
        KeyPairPtr default_key_pair,
-       AlternativeStorePtr alternative_store,
        bool client_only_node,
        const uint16_t &k,
        const uint16_t &alpha,
@@ -167,9 +162,11 @@ class Node {
   // value(s) for caching.
   //
   // Other than this, the callback parameters are populated as follows:
-  // * If any queried peer holds the value(s) in its alternative_store, its
-  //   details are passed in the callback and no other callback parameters are
-  //   completed.  In this case, the return code is kFoundAlternativeStoreHolder
+  // * If any queried peer holds the value(s) outwith its kademlia datastore
+  //   (indicated by a positive result from invoking the check_cache_functor
+  //   which has a setter below), its details are passed in the callback and no
+  //   other callback parameters are completed.  In this case, the return code
+  //   is kFoundCachedCopyHolder.
   // * If any queried peer holds the value(s) in its kademlia datastore, the
   //   value(s) and signature(s) are passed in the callback and no other
   //   callback parameters are completed.  In this case, the return code is
@@ -180,7 +177,7 @@ class Node {
   //
   // These return codes are all >= 0.  Any other return code indicates an error
   // in the lookup process and will be < 0.  N.B. This node could be returned as
-  // the alternative_store holder or as one of the closest contacts.
+  // the cached_copy_holder or as one of the closest contacts.
   void FindValue(const Key &key,
                  PrivateKeyPtr private_key,
                  FindValueFunctor callback,
@@ -239,6 +236,12 @@ class Node {
   // Checks whether the contact is online or not
   void Ping(const Contact &contact, PingFunctor callback);
 
+  // Sets a functor which is invoked whenever this node's Service receives a
+  // FindValue RPC.  If the functor returns true, the node responds that it has
+  // a copy of the requested value (somewhere other than its internal
+  // DataStore), and hence causes the peer's lookup to terminate.
+  void set_check_cache_functor(const CheckCacheFunctor &check_cache_functor);
+
   // This node's contact details
   Contact contact() const;
 
@@ -246,7 +249,6 @@ class Node {
   bool joined() const;
 
   // Getters
-  AlternativeStorePtr alternative_store();
   OnOnlineStatusChangePtr on_online_status_change();
   bool client_only_node() const;
   uint16_t k() const;
@@ -260,23 +262,23 @@ struct FindValueReturns {
   FindValueReturns() : return_code(kPendingResult),
                        values_and_signatures(),
                        closest_nodes(),
-                       alternative_store_holder(),
+                       cached_copy_holder(),
                        needs_cache_copy() {}
   FindValueReturns(
       int return_code_in,
       const std::vector<ValueAndSignature> &values_and_signatures_in,
       const std::vector<Contact> &closest_nodes_in,
-      const Contact &alternative_store_holder_in,
+      const Contact &cached_copy_holder_in,
       const Contact &needs_cache_copy_in)
           : return_code(return_code_in),
             values_and_signatures(values_and_signatures_in),
             closest_nodes(closest_nodes_in),
-            alternative_store_holder(alternative_store_holder_in),
+            cached_copy_holder(cached_copy_holder_in),
             needs_cache_copy(needs_cache_copy_in) {}
   int return_code;
   std::vector<ValueAndSignature> values_and_signatures;
   std::vector<Contact> closest_nodes;
-  Contact alternative_store_holder;
+  Contact cached_copy_holder;
   Contact needs_cache_copy;
 };
 

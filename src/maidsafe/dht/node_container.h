@@ -76,7 +76,6 @@ class NodeContainer {
       uint8_t thread_count,
       KeyPairPtr key_pair,
       MessageHandlerPtr message_handler,
-      AlternativeStorePtr alternative_store,
       bool client_only_node,
       uint16_t k = 8,
       uint16_t alpha = 3,
@@ -358,7 +357,6 @@ void NodeContainer<NodeType>::Init(
     uint8_t thread_count,
     KeyPairPtr key_pair,
     MessageHandlerPtr message_handler,
-    AlternativeStorePtr alternative_store,
     bool client_only_node,
     uint16_t k,
     uint16_t alpha,
@@ -405,9 +403,8 @@ void NodeContainer<NodeType>::Init(
 
   // Create node
   node_.reset(new NodeType(asio_service_.service(), listening_transport_,
-                           message_handler_, key_pair_, alternative_store,
-                           client_only_node, k, alpha, beta,
-                           mean_refresh_interval));
+                           message_handler_, key_pair_, client_only_node, k,
+                           alpha, beta, mean_refresh_interval));
 }
 
 template <typename NodeType>
@@ -760,7 +757,7 @@ void NodeContainer<NodeType>::GetAndResetFindValueResult(
     FindValueReturns *find_value_returns) {
   if (find_value_returns)
     *find_value_returns = find_value_returns_;
-  find_value_returns_.alternative_store_holder = Contact();
+  find_value_returns_.cached_copy_holder = Contact();
   find_value_returns_.closest_nodes.clear();
   find_value_returns_.needs_cache_copy = Contact();
   find_value_returns_.return_code = kPendingResult;

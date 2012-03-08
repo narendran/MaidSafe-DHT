@@ -179,12 +179,12 @@ void Commands::FindValueCallback(FindValueReturns find_value_returns,
                          "contact(s).") %
                          find_value_returns.values_and_signatures.size() %
                          find_value_returns.closest_nodes.size();
-    if (find_value_returns.alternative_store_holder.node_id().String() !=
+    if (find_value_returns.cached_copy_holder.node_id().String() !=
         kZeroId) {
       ULOG(INFO)
           << boost::format(
-                 "Node holding value in its alternative_store: [ %1% ]")
-                 % find_value_returns.alternative_store_holder.node_id().
+                 "Node holding a cached copy of the value: [ %1% ]")
+                 % find_value_returns.cached_copy_holder.node_id().
                  ToStringEncoded(NodeId::kBase64);
     }
     if (find_value_returns.needs_cache_copy.node_id().String() !=

@@ -37,15 +37,13 @@ Node::Node(boost::asio::io_service &asio_service,             // NOLINT (Fraser)
            TransportPtr listening_transport,
            MessageHandlerPtr message_handler,
            KeyPairPtr default_key_pair,
-           AlternativeStorePtr alternative_store,
            bool client_only_node,
            const uint16_t &k,
            const uint16_t &alpha,
            const uint16_t &beta,
            const boost::posix_time::time_duration &mean_refresh_interval)
     : pimpl_(new NodeImpl(asio_service, listening_transport, message_handler,
-                          default_key_pair, alternative_store,
-                          client_only_node, k, alpha, beta,
+                          default_key_pair, client_only_node, k, alpha, beta,
                           mean_refresh_interval)) {}
 
 Node::~Node() {}
@@ -149,16 +147,17 @@ void Node::Ping(const Contact &contact, PingFunctor callback) {
   pimpl_->Ping(contact, callback);
 }
 
+void Node::set_check_cache_functor(
+    const CheckCacheFunctor &check_cache_functor) {
+  pimpl_->set_check_cache_functor(check_cache_functor);
+}
+
 Contact Node::contact() const {
   return pimpl_->contact();
 }
 
 bool Node::joined() const {
   return pimpl_->joined();
-}
-
-AlternativeStorePtr Node::alternative_store() {
-  return pimpl_->alternative_store();
 }
 
 OnOnlineStatusChangePtr Node::on_online_status_change() {

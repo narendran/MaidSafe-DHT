@@ -30,7 +30,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/dht/service.h"
 
-#include "maidsafe/common/alternative_store.h"
 #include "maidsafe/common/crypto.h"
 
 #ifdef __MSVC__
@@ -56,12 +55,10 @@ namespace dht {
 
 Service::Service(std::shared_ptr<RoutingTable> routing_table,
                  std::shared_ptr<DataStore> data_store,
-                 AlternativeStorePtr alternative_store,
                  PrivateKeyPtr private_key,
                  const uint16_t &k)
     : routing_table_(routing_table),
       datastore_(data_store),
-      alternative_store_(alternative_store),
       private_key_(private_key),
       node_joined_(false),
       node_contact_(),
@@ -73,7 +70,8 @@ Service::Service(std::shared_ptr<RoutingTable> routing_table,
       contact_validator_(std::bind(&StubContactValidator, args::_1, args::_2,
                                    args::_3)),
       validate_functor_(std::bind(&StubValidate, args::_1, args::_2,
-                                  args::_3)) {}
+                                  args::_3)),
+      check_cache_functor_() {}
 
 Service::~Service() {}
 
@@ -165,9 +163,9 @@ void Service::FindValue(const transport::Info &info,
 
   Contact sender(FromProtobuf(request.sender()));
 
-  // Are we the alternative value holder?
-  if (alternative_store_ && (alternative_store_->Has(key.String()))) {
-    *(response->mutable_alternative_value_holder()) = ToProtobuf(node_contact_);
+  // Do we have the value stored outside of the DataStore?
+  if (check_cache_functor_ && check_cache_functor_(key.String())) {
+    *(response->mutable_cached_copy_holder()) = ToProtobuf(node_contact_);
     response->set_result(true);
     AddContactToRoutingTable(sender, info);
     return;

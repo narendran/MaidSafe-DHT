@@ -31,7 +31,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <utility>
 #include <vector>
 
-#include "maidsafe/common/alternative_store.h"
 #include "maidsafe/dht/node_container.h"
 #include "maidsafe/dht/node_id.h"
 #include "maidsafe/dht/version.h"
@@ -101,8 +100,8 @@ void LocalNetwork<NodeType>::SetUp() {
     std::shared_ptr<maidsafe::dht::NodeContainer<NodeType>>
         node_container(new maidsafe::dht::NodeContainer<NodeType>());
     node_container->Init(threads_per_node_, KeyPairPtr(),
-                         MessageHandlerPtr(), AlternativeStorePtr(), false, k_,
-                         alpha_, beta_, mean_refresh_interval_);
+                         MessageHandlerPtr(), false, k_, alpha_, beta_,
+                         mean_refresh_interval_);
     node_container->MakeAllCallbackFunctors(&mutex_, &cond_var_);
 
     int result(kPendingResult);

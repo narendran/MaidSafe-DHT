@@ -38,7 +38,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "maidsafe/common/test.h"
 
-#include "maidsafe/common/alternative_store.h"
 #include "maidsafe/common/asio_service.h"
 #include "maidsafe/common/utils.h"
 #include "maidsafe/common/crypto.h"
@@ -164,12 +163,6 @@ class MockTransport : public transport::Transport {
 
  private:
   boost::asio::io_service io_service_;
-};
-
-class TestAlternativeStore : public AlternativeStore {
- public:
-  ~TestAlternativeStore() {}
-  bool Has(const std::string&) { return false; }
 };
 
 template <typename TransportType>
@@ -472,9 +465,9 @@ class MockRpcs : public Rpcs<TransportType>, public CreateContactAndNodeId {
       std::vector<Contact> response_contact_list) {
     uint16_t interval(10 * (RandomUint32() % 5) + 1);
     Sleep(bptime::milliseconds(interval));
-    Contact alternative_store;
+    Contact cache_holder;
     callback(rank_info_, transport::kSuccess, response_values_and_signatures,
-             response_contact_list, alternative_store);
+             response_contact_list, cache_holder);
   }
 
   void FindValueNoResponseThread(
@@ -484,9 +477,9 @@ class MockRpcs : public Rpcs<TransportType>, public CreateContactAndNodeId {
       int result) {
     uint16_t interval(100 * (RandomUint32() % 5) + 1);
     Sleep(bptime::milliseconds(interval));
-    Contact alternative_store;
+    Contact cache_holder;
     callback(rank_info_, result, response_values_and_signatures,
-             response_contact_list, alternative_store);
+             response_contact_list, cache_holder);
   }
 
   void SingleDeleteResponse(RpcDeleteFunctor callback,
@@ -631,7 +624,6 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
       : CreateContactAndNodeId(g_kKademliaK),
         asio_service_(),
         data_store_(),
-        alternative_store_(),
         private_key_(new asymm::PrivateKey()),
         mock_transport_(new MockTransport),
         rank_info_(),
@@ -640,7 +632,6 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
                            mock_transport_,
                            message_handler_,
                            KeyPairPtr(new asymm::Keys()),
-                           alternative_store_,
                            false,
                            g_kKademliaK,
                            g_kAlpha,
@@ -651,7 +642,6 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
                                  mock_transport_,
                                  message_handler_,
                                  KeyPairPtr(new asymm::Keys()),
-                                 alternative_store_,
                                  true,
                                  g_kKademliaK,
                                  g_kAlpha,
@@ -702,7 +692,6 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
 
   AsioService asio_service_;
   std::shared_ptr<DataStore> data_store_;
-  AlternativeStorePtr alternative_store_;
   PrivateKeyPtr private_key_;
   TransportPtr mock_transport_;
   RankInfoPtr rank_info_;
@@ -2104,10 +2093,6 @@ TEST_F(MockNodeImplTest, BEH_Getters) {
       EXPECT_TRUE(not_timed_out);
     }
     EXPECT_TRUE(local_node_->joined());
-  }
-  {
-    // alternative_store()
-    EXPECT_EQ(alternative_store_, node_->alternative_store());
   }
   {
     // on_online_status_change()

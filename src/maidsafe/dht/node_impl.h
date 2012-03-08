@@ -37,8 +37,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boost/asio/deadline_timer.hpp"
 #include "boost/date_time/posix_time/posix_time_types.hpp"
 #include "boost/signals2/connection.hpp"
-#include "boost/thread/shared_mutex.hpp"
-#include "boost/thread/locks.hpp"
+#include "boost/thread/mutex.hpp"
 
 #include "maidsafe/dht/node_impl_structs.h"
 #include "maidsafe/dht/config.h"
@@ -83,7 +82,6 @@ class NodeImpl {
            TransportPtr listening_transport,
            MessageHandlerPtr message_handler,
            KeyPairPtr default_asym_key_pair,
-           AlternativeStorePtr alternative_store,
            bool client_only_node,
            const uint16_t &k,
            const uint16_t &alpha,
@@ -218,11 +216,11 @@ class NodeImpl {
    *  @param[out] contacts Bootstrap contacts in the routing table */
   void GetBootstrapContacts(std::vector<Contact> *contacts);
 
+  void set_check_cache_functor(const CheckCacheFunctor &check_cache_functor);
+
   Contact contact() const { return contact_; }
 
   bool joined() const { return joined_; }
-
-  AlternativeStorePtr alternative_store() { return alternative_store_; }
 
   OnOnlineStatusChangePtr on_online_status_change() {
     return on_online_status_change_;
@@ -278,7 +276,7 @@ class NodeImpl {
                   std::string *signature);
 
   /** Runs the FindValue callback for the case where this node has the value(s)
-   *  locally (i.e. in its alternative_store_ or data_store_). */
+   *  locally (i.e. cached outside of kademlia or in data_store_). */
   void FoundValueLocally(const FindValueReturns &find_value_returns,
                          FindValueFunctor callback);
 
@@ -310,7 +308,7 @@ class NodeImpl {
    *  considered as the enquired contact got some problems.
    *  @param[in] values_and_signatures The values and signatures of the key.
    *  @param[in] contacts The closest contacts.
-   *  @param[in] alternative_store The alternative store contact.
+   *  @param[in] cached_copy_holder The cached copy holder's contact.
    *  @param[in] peer The Contact being queried.
    *  @param[in] lookup_args The arguments struct holding all shared info. */
   void IterativeFindCallback(
@@ -318,14 +316,14 @@ class NodeImpl {
       int result,
       const std::vector<ValueAndSignature> &values_and_signatures,
       const std::vector<Contact> &contacts,
-      const Contact &alternative_store,
+      const Contact &cached_copy_holder,
       Contact peer,
       LookupArgsPtr lookup_args);
 
   bool AbortLookup(int result,
                    const std::vector<ValueAndSignature> &values_and_signatures,
                    const std::vector<Contact> &contacts,
-                   const Contact &alternative_store,
+                   const Contact &cached_copy_holder,
                    const Contact &peer,
                    bool second_node,
                    LookupArgsPtr lookup_args);
@@ -501,7 +499,6 @@ class NodeImpl {
   MessageHandlerPtr message_handler_;
   PublicKeyPtr default_public_key_;
   PrivateKeyPtr default_private_key_;
-  AlternativeStorePtr alternative_store_;
   OnOnlineStatusChangePtr on_online_status_change_;
   bool client_only_node_;
   /** Kademlia k parameter */
@@ -526,6 +523,8 @@ class NodeImpl {
   boost::signals2::connection ping_oldest_contact_, validate_contact_,
                               ping_down_contact_;
   boost::asio::deadline_timer refresh_data_store_timer_;
+  boost::mutex join_mutex_;
+  CheckCacheFunctor check_cache_functor_;
 };
 
 }  // namespace dht

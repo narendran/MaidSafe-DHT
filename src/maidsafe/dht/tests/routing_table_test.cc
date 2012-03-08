@@ -1021,10 +1021,13 @@ TEST_P(RoutingTableSingleKTest, BEH_MutexTestWithMultipleThread) {
   }
   // Running the threads
   asio_service.Start(kNumberOfThreads);
-  asio_service.Stop();
   node_ids_stored.insert(node_ids_stored.end(), node_ids_to_be_stored.begin(),
                          node_ids_to_be_stored.end());
-  // Varifying results
+  int count(0), attempts(1000);
+  while ((node_ids_stored.size() != GetSize()) && (count++ != attempts))
+    Sleep(boost::posix_time::milliseconds(1));
+  asio_service.Stop();
+  // Verifying results
   ASSERT_EQ(node_ids_stored.size(), GetSize());
   for (uint16_t i = 0; i < node_ids_stored.size(); ++i) {
     Contact result;
