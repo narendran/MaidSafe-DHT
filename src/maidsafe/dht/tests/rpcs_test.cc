@@ -598,7 +598,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreAndFindValue) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   // attempt to retrieve value stored
   return_values_and_signatures.clear();
@@ -660,7 +659,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreAndFindAndDeleteValueXXXToBeRemoved) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   // Allow for simulated delay in validation of request by service_.
   Sleep(kNetworkDelay);
@@ -726,15 +724,11 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
   boost::posix_time::seconds ttl(3600);
   KeyValueSignature kvs =
       MakeKVS(this->sender_crypto_key_id_, 1024, key.String(), "");
-  asymm::PublicKey public_key;
-  asymm::DecodePublicKey("Different Public Key found on Network Lookup!!",
-                        &public_key);
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    public_key);
+
+  // Setting contact validation at service end to fail.
   this->SetContactValidation(false);
 
-  // Malicious sender sends fake public_key
+  // Malicious sender sends fake info
   this->rpcs_->Store(key, kvs.value, kvs.signature, ttl,
                      GetPrivateKeyPtr(this->rpcs_key_pair_),
       this->service_contact_, std::bind(&TestCallback, args::_1, args::_2,
@@ -744,7 +738,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMalicious) {
     Sleep(boost::posix_time::milliseconds(10));
   // Sender receives kSuccess, but value not stored in receiver's datastore
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   std::vector<ValueAndSignature> return_values_and_signatures;
   std::vector<Contact> return_contacts;
@@ -833,9 +826,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreRefresh) {
   std::string store_message_sig;
   asymm::Sign(message, this->sender_crypto_key_id_.private_key,
              &store_message_sig);
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    this->sender_crypto_key_id_.public_key);
 
   // send original store request
   this->rpcs_->Store(key, kvs.value, kvs.signature, ttl,
@@ -846,7 +836,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreRefresh) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
   bptime::ptime refresh_time_old = this->GetRefreshTime(kvs);
   Sleep(boost::posix_time::seconds(1));
 
@@ -860,7 +849,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreRefresh) {
 
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
-  JoinNetworkLookup(this->service_key_pair_);
   EXPECT_EQ(kSuccess, response_code);
 
   // attempt to find original value
@@ -1110,14 +1098,9 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteMalicious) {
   this->AddToReceiverDataStore(kvs, this->sender_crypto_key_id_,
                                this->rpcs_contact_, request_signature);
   EXPECT_TRUE(IsKeyValueInDataStore(kvs, this->data_store_));
-  asymm::PublicKey public_key;
-  asymm::DecodePublicKey("Different Public Key found on Network Lookup!!",
-                        &public_key);
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    public_key);
-
-  // Malicious sender sends fake public_key
+  // Setting contact validation at service end to fail.
+  this->SetContactValidation(false);
+  // Malicious sender sends fake request.
   this->rpcs_->Delete(key, kvs.value, kvs.signature,
       GetPrivateKeyPtr(this->rpcs_key_pair_),
       this->service_contact_, std::bind(&TestCallback, args::_1, args::_2,
@@ -1127,7 +1110,7 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteMalicious) {
     Sleep(boost::posix_time::milliseconds(10));
   // Sender receives kSuccess, but value not deleted from receiver's datastore
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
+
   // attempt to retrieve value stored
   std::vector<ValueAndSignature> return_values_and_signatures;
   std::vector<Contact> return_contacts;
@@ -1194,18 +1177,15 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteMultipleRequest) {
                                  this->rpcs_contact_, request_signature);
     EXPECT_TRUE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
   }
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    this->sender_crypto_key_id_.public_key);
   std::string signature;
 
   for (size_t i = 0; i < 10; ++i) {
     if (i % 2)
-      signature = "invalid signature";
+      signature = "";
     else
       asymm::Sign(kvs_vector[i].value,
-                 this->sender_crypto_key_id_.private_key,
-                 &signature);
+                  this->sender_crypto_key_id_.private_key,
+                  &signature);
     this->rpcs_->Delete(key, kvs_vector[i].value, signature,
                         GetPrivateKeyPtr(
                             this->rpcs_key_pair_),
@@ -1224,15 +1204,16 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteMultipleRequest) {
     }
   }
   this->StopAndReset();
-  JoinNetworkLookup(this->service_key_pair_);
 
   // Checking results
   for (int i = 0; i < 10; ++i) {
-    EXPECT_EQ(kSuccess, status_response[i].second) << "Failed index: " << i;
-    if (i % 2)
+    if (i % 2) {
       EXPECT_TRUE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
-    else
+      EXPECT_NE(kSuccess, status_response[i].second) << "Failed index: " << i;
+    } else {
       EXPECT_FALSE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
+      EXPECT_EQ(kSuccess, status_response[i].second) << "Failed index: " << i;
+    }
   }
 }
 
@@ -1372,12 +1353,11 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMalicious) {
                                     request_signature);
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
   bptime::ptime refresh_time_old = this->GetRefreshTime(kvs);
-  asymm::PublicKey public_key;
-  asymm::DecodePublicKey("Different Public Key found on Network Lookup!!",
-                        &public_key);
-  AddTestValidation(this->service_key_pair_, sender_id.String(),
-                    public_key);
-  // Malicious sender sends fake public_key
+
+  // Setting contact validation at service end to fail.
+  this->SetContactValidation(false);
+
+  // Malicious sender sends fake info
   this->rpcs_->DeleteRefresh(request_signature.first, request_signature.second,
       GetPrivateKeyPtr(this->rpcs_key_pair_), this->service_contact_,
       std::bind(&TestCallback, args::_1, args::_2, &done, &response_code));
@@ -1387,7 +1367,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMalicious) {
   EXPECT_EQ(kSuccess, response_code);
 
   this->StopAndReset();
-  JoinNetworkLookup(this->service_key_pair_);
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
   EXPECT_EQ(this->GetRefreshTime(kvs), refresh_time_old);
 }
