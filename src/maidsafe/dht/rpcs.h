@@ -559,25 +559,24 @@ void Rpcs<TransportType>::FindValueCallback(
 
     std::vector<ValueAndSignature> values_and_signatures;
     std::vector<Contact> contacts;
-    Contact alternative_value_holder;
+    Contact cached_copy_holder;
 
     if (transport_condition != transport::kSuccess) {
       callback(RankInfoPtr(new transport::Info(info)), transport_condition,
-               values_and_signatures, contacts, alternative_value_holder);
+               values_and_signatures, contacts, cached_copy_holder);
       return;
     }
     if (!response.IsInitialized() || !response.result()) {
       callback(RankInfoPtr(new transport::Info(info)), transport::kError,
-               values_and_signatures, contacts, alternative_value_holder);
+               values_and_signatures, contacts, cached_copy_holder);
       return;
     }
 
-    if (response.has_alternative_value_holder()) {
-      alternative_value_holder =
-          FromProtobuf(response.alternative_value_holder());
+    if (response.has_cached_copy_holder()) {
+      cached_copy_holder = FromProtobuf(response.cached_copy_holder());
       callback(RankInfoPtr(new transport::Info(info)),
-               kFoundAlternativeStoreHolder, values_and_signatures, contacts,
-               alternative_value_holder);
+               kFoundCachedCopyHolder, values_and_signatures, contacts,
+               cached_copy_holder);
       return;
     }
 
@@ -591,7 +590,7 @@ void Rpcs<TransportType>::FindValueCallback(
                  << DebugId(rpcs_failure_peer->peer) << " found "
                  << values_and_signatures.size() << " values.";
       callback(RankInfoPtr(new transport::Info(info)), kSuccess,
-               values_and_signatures, contacts, alternative_value_holder);
+               values_and_signatures, contacts, cached_copy_holder);
       return;
     }
 
@@ -602,11 +601,11 @@ void Rpcs<TransportType>::FindValueCallback(
                  << DebugId(rpcs_failure_peer->peer) << " found "
                  << contacts.size() << " contacts.";
       callback(RankInfoPtr(new transport::Info(info)), kFailedToFindValue,
-               values_and_signatures, contacts, alternative_value_holder);
+               values_and_signatures, contacts, cached_copy_holder);
       return;
     }
     callback(RankInfoPtr(new transport::Info(info)), kIterativeLookupFailed,
-             values_and_signatures, contacts, alternative_value_holder);
+             values_and_signatures, contacts, cached_copy_holder);
   }
 }
 

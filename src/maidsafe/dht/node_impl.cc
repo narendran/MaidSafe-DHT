@@ -29,7 +29,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <functional>
 #include <map>
 
-#include "maidsafe/common/alternative_store.h"
 #include "maidsafe/common/rsa.h"
 #include "maidsafe/common/utils.h"
 #include "maidsafe/transport/rudp_transport.h"
@@ -61,7 +60,7 @@ namespace dht {
 namespace {
 bool FindResultError(int result) {
   return (result != kSuccess &&
-          result != kFoundAlternativeStoreHolder &&
+          result != kFoundCachedCopyHolder &&
           result != kFailedToFindValue);
 }
 }  // unnamed namespace
@@ -70,7 +69,6 @@ NodeImpl::NodeImpl(boost::asio::io_service &asio_service,     // NOLINT (Fraser)
                    TransportPtr listening_transport,
                    MessageHandlerPtr message_handler,
                    KeyPairPtr default_asym_key_pair,
-                   AlternativeStorePtr alternative_store,
                    bool client_only_node,
                    const uint16_t &k,
                    const uint16_t &alpha,
@@ -81,7 +79,6 @@ NodeImpl::NodeImpl(boost::asio::io_service &asio_service,     // NOLINT (Fraser)
       message_handler_(message_handler),
       default_public_key_(),
       default_private_key_(),
-      alternative_store_(alternative_store),
       on_online_status_change_(new OnOnlineStatusChangePtr::element_type),
       client_only_node_(client_only_node),
       k_(k),
@@ -104,7 +101,9 @@ NodeImpl::NodeImpl(boost::asio::io_service &asio_service,     // NOLINT (Fraser)
       ping_oldest_contact_(),
       validate_contact_(),
       ping_down_contact_(),
-      refresh_data_store_timer_(asio_service_) {
+      refresh_data_store_timer_(asio_service_),
+      join_mutex_(),
+      check_cache_functor_() {
   if (default_asym_key_pair) {
     default_private_key_ = PrivateKeyPtr(
         new asymm::PrivateKey(default_asym_key_pair->private_key));
@@ -148,8 +147,8 @@ void NodeImpl::Join(const NodeId &node_id,
   }
 
   if (!rpcs_) {
-    rpcs_.reset(new Rpcs<transport::RudpTransport>(asio_service_,
-                                                   default_private_key_));
+    rpcs_.reset(new Rpcs<transport::TcpTransport>(asio_service_,
+                                                  default_private_key_));
   }
   // TODO(Fraser#5#): 2011-07-08 - Need to update code for local endpoints.
   if (!client_only_node_) {
@@ -242,17 +241,19 @@ void NodeImpl::JoinFindValueCallback(FindValueReturns find_value_returns,
 }
 
 void NodeImpl::JoinSucceeded(JoinFunctor callback) {
+  boost::mutex::scoped_lock lock(join_mutex_);
   joined_ = true;
   if (!client_only_node_) {
     data_store_.reset(new DataStore(kMeanRefreshInterval_));
     service_.reset(new Service(routing_table_, data_store_,
-                               alternative_store_, default_private_key_, k_));
+                               default_private_key_, k_));
     service_->set_node_joined(true);
     service_->set_node_contact(contact_);
     service_->ConnectToSignals(message_handler_);
     service_->set_contact_validation_getter(contact_validation_getter_);
     service_->set_contact_validator(contact_validator_);
     service_->set_validate(validate_functor_);
+    service_->set_check_cache_functor(check_cache_functor_);
     refresh_data_store_timer_.expires_from_now(kDataStoreCheckInterval_);
     refresh_data_store_timer_.async_wait(
         std::bind(&NodeImpl::RefreshDataStore, this, args::_1));
@@ -430,8 +431,8 @@ void NodeImpl::FindValue(const Key &key,
       if (*itr == contact_) {
         std::vector<ValueAndSignature> values_and_sigs;
         std::vector<Contact> contacts;
-        if (alternative_store_ && alternative_store_->Has(key.String())) {
-          FindValueReturns find_value_returns(kFoundAlternativeStoreHolder,
+        if (check_cache_functor_ && check_cache_functor_(key.String())) {
+          FindValueReturns find_value_returns(kFoundCachedCopyHolder,
                                               values_and_sigs, contacts,
                                               contact_, Contact());
           asio_service_.post(std::bind(&NodeImpl::FoundValueLocally, this,
@@ -686,7 +687,7 @@ void NodeImpl::IterativeFindCallback(
     int result,
     const std::vector<ValueAndSignature> &values_and_signatures,
     const std::vector<Contact> &contacts,
-    const Contact &alternative_store,
+    const Contact &cached_copy_holder,
     Contact peer,
     LookupArgsPtr lookup_args) {
   // It is only OK for a node to return no meaningful information if this is
@@ -731,7 +732,7 @@ void NodeImpl::IterativeFindCallback(
   BOOST_ASSERT(lookup_args->rpcs_in_flight_for_current_iteration >= -1);
 
   // If we should stop early (found value, or found single contact), do so.
-  if (AbortLookup(result, values_and_signatures, contacts, alternative_store,
+  if (AbortLookup(result, values_and_signatures, contacts, cached_copy_holder,
                   peer, second_node, lookup_args))
     return;
 
@@ -804,26 +805,26 @@ bool NodeImpl::AbortLookup(
     int result,
     const std::vector<ValueAndSignature> &values_and_signatures,
     const std::vector<Contact> &contacts,
-    const Contact &alternative_store,
+    const Contact &cached_copy_holder,
     const Contact &peer,
     bool second_node,
     LookupArgsPtr lookup_args) {
   if (lookup_args->kOperationType == LookupArgs::kFindValue) {
-    // If the value was returned, or the peer claimed to have the value in its
-    // alternative store, we're finished with the lookup.
-    if (result == kSuccess || result == kFoundAlternativeStoreHolder ||
+    // If the value was returned, or the peer claimed to have the value cached
+    // outside of kademlia, we're finished with the lookup.
+    if (result == kSuccess || result == kFoundCachedCopyHolder ||
         second_node) {
 #ifdef DEBUG
       if (second_node) {
         BOOST_ASSERT(values_and_signatures.empty() && contacts.empty() &&
-                     alternative_store == Contact());
+                     cached_copy_holder == Contact());
       } else {
         BOOST_ASSERT(!values_and_signatures.empty() ||
-                     alternative_store == peer);
+                     cached_copy_holder == peer);
       }
 #endif
       FindValueReturns find_value_returns(result, values_and_signatures,
-                                          contacts, alternative_store,
+                                          contacts, cached_copy_holder,
                                           lookup_args->cache_candidate);
       lookup_args->lookup_phase_complete = true;
       std::static_pointer_cast<FindValueArgs>(lookup_args)->callback(
@@ -969,8 +970,8 @@ void NodeImpl::HandleCompletedLookup(
         std::static_pointer_cast<FindNodesArgs>(lookup_args)->callback(result,
             contacts);
       } else {
-        // We've already handled the case where the value or an alternative
-        // store holder was found (in AbortLookup).
+        // We've already handled the case where the value or a cached copy
+        // holder was found (in AbortLookup).
         int result(contacts.empty() ? kIterativeLookupFailed :
                    kFailedToFindValue);
         FindValueReturns find_value_returns(result,
@@ -1629,6 +1630,15 @@ void NodeImpl::AsyncHandleRpcCallback(const Contact &contact,
   asio_service_.post(std::bind(&NodeImpl::HandleRpcCallback, this, contact,
                                rank_info, result));
 }
+
+void NodeImpl::set_check_cache_functor(
+    const CheckCacheFunctor &check_cache_functor) {
+  boost::mutex::scoped_lock lock(join_mutex_);
+  check_cache_functor_ = check_cache_functor;
+  if (service_)
+    service_->set_check_cache_functor(check_cache_functor);
+}
+
 
 }  // namespace dht
 }  // namespace maidsafe

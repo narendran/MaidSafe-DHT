@@ -346,8 +346,8 @@ int main(int argc, char **argv) {
     mk::demo::DemoNodePtr demo_node(new mk::demo::DemoNode);
     ULOG(INFO) << "Creating node...";
     demo_node->Init(static_cast<uint8_t>(thread_count), mk::KeyPairPtr(),
-                    mk::MessageHandlerPtr(), mk::AlternativeStorePtr(),
-                    client_only_node, k, alpha, beta, mean_refresh_interval);
+                    mk::MessageHandlerPtr(), client_only_node, k, alpha, beta,
+                    mean_refresh_interval);
     std::pair<uint16_t, uint16_t> ports(port_range.first, port_range.second);
     int result = demo_node->Start(bootstrap_contacts, ports);
 

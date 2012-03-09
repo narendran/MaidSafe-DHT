@@ -26,7 +26,7 @@ message FindValueResponse {
   required bool result = 1;
   repeated Contact closest_nodes = 2;
   repeated SignedValue signed_values = 3;
-  optional Contact alternative_value_holder = 4;
+  optional Contact cached_copy_holder = 4;
 }
 
 message FindNodesRequest {

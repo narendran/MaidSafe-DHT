@@ -156,12 +156,12 @@ class MockMessageHandler : public MessageHandler {
             protobuf::SignedValue value;
             value.set_value("value");
             value.set_signature("signature");
-            Contact contact, alternative_value_holder;
+            Contact contact, cached_copy_holder;
             response.set_result(true);
             *response.add_closest_nodes() = ToProtobuf(contact);
             *response.add_signed_values() = value;
-            *response.mutable_alternative_value_holder() =
-                ToProtobuf(alternative_value_holder);
+            *response.mutable_cached_copy_holder() =
+                ToProtobuf(cached_copy_holder);
             break;
           }
           case 2: {
@@ -788,7 +788,7 @@ TEST_F(MockRpcsTest, BEH_FindValue) {
     }
     switch (i) {
       case 0: {
-        EXPECT_EQ(kFoundAlternativeStoreHolder, result) << i;
+        EXPECT_EQ(kFoundCachedCopyHolder, result) << i;
         result_type = 2;
         break;
       }
@@ -799,7 +799,7 @@ TEST_F(MockRpcsTest, BEH_FindValue) {
         break;
       }
       case 2: {
-        EXPECT_EQ(kFoundAlternativeStoreHolder, result);
+        EXPECT_EQ(kFoundCachedCopyHolder, result);
         repeat_factor = 0;
         break;
       }
@@ -809,7 +809,7 @@ TEST_F(MockRpcsTest, BEH_FindValue) {
         break;
       }
       case 4: {
-        EXPECT_EQ(kFoundAlternativeStoreHolder, result);
+        EXPECT_EQ(kFoundCachedCopyHolder, result);
         break;
       }
       default:

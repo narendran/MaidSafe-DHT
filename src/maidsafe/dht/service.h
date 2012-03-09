@@ -81,12 +81,10 @@ class Service : public std::enable_shared_from_this<Service> {
    * data_store must be provided.
    *  @param routing_table The routing table contains all contacts.
    *  @param data_store The data_store table contains <value,sig,key> tuples.
-   *  @param alternative_store Alternative store.
    *  @param private_key Key for validation.
    *  @param[in] k Kademlia constant k.*/
   Service(std::shared_ptr<RoutingTable> routing_table,
           std::shared_ptr<DataStore> data_store,
-          AlternativeStorePtr alternative_store,
           PrivateKeyPtr private_key,
           const uint16_t &k);
 
@@ -198,6 +196,10 @@ class Service : public std::enable_shared_from_this<Service> {
 
   void set_validate(asymm::ValidateFunctor validate_functor) {
     validate_functor_ = validate_functor;
+  }
+
+  void set_check_cache_functor(const CheckCacheFunctor &check_cache_functor) {
+    check_cache_functor_ = check_cache_functor;
   }
 
   friend class test::ServicesTest;
@@ -313,8 +315,6 @@ class Service : public std::enable_shared_from_this<Service> {
   std::shared_ptr<RoutingTable> routing_table_;
   /** data store */
   std::shared_ptr<DataStore> datastore_;
-  /** alternative store */
-  AlternativeStorePtr alternative_store_;
   /** Private Key */
   PrivateKeyPtr private_key_;
   /** bool switch of joined status */
@@ -330,6 +330,7 @@ class Service : public std::enable_shared_from_this<Service> {
   asymm::GetPublicKeyAndValidationFunctor contact_validation_getter_;
   asymm::ValidatePublicKeyFunctor contact_validator_;
   asymm::ValidateFunctor validate_functor_;
+  CheckCacheFunctor check_cache_functor_;
 };
 
 }  // namespace dht

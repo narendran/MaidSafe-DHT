@@ -96,7 +96,7 @@ void TestFindValueCallback(
     int callback_code,
     std::vector<ValueAndSignature> values_and_signatures,
     std::vector<Contact> contacts,
-    Contact/* alternative_value_holder */,
+    Contact/* cached_copy_holder */,
     std::vector<ValueAndSignature> *return_values_and_signatures,
     std::vector<Contact> *return_contacts,
     bool *done,
@@ -115,7 +115,6 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
         node_id_(NodeId::kRandomId),
         routing_table_(new RoutingTable(node_id_, g_kKademliaK)),
         data_store_(new DataStore(bptime::seconds(3600))),
-        alternative_store_(),
         asio_service_(),
         local_asio_(),
         rank_info_(),
@@ -177,7 +176,6 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
     service_ = std::shared_ptr<Service>(new Service(
         routing_table_,
         data_store_,
-        alternative_store_,
         GetPrivateKeyPtr(service_key_pair_),
         g_kKademliaK));
     service_->set_node_joined(true);
@@ -323,7 +321,6 @@ class RpcsTest : public CreateContactAndNodeId, public testing::Test {
   NodeId node_id_;
   std::shared_ptr<RoutingTable> routing_table_;
   std::shared_ptr<DataStore> data_store_;
-  AlternativeStorePtr alternative_store_;
   KeyPairPtr service_key_pair_;
   std::shared_ptr<Service> service_;
   KeyPairPtr rpcs_key_pair_;
@@ -1604,7 +1601,6 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
         node_id_(NodeId::kRandomId),
         routing_table_(),
         data_store_(),
-        alternative_store_(),
         services_securifier_(),
         service_(),
         rpcs_key_pair_(),
@@ -1630,8 +1626,6 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
                                                                 g_kKademliaK)));
       data_store_.push_back(DataStorePtr(
           new DataStore(bptime::seconds(3600))));
-      AlternativeStorePtr alternative_store;
-      alternative_store_.push_back(alternative_store);
       local_asios_.push_back(std::shared_ptr<AsioService>(new AsioService));
       (*local_asios_.rbegin())->Start(1);
     }
@@ -1694,7 +1688,6 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
       services_securifier_.push_back(KeyPairPtr(new asymm::Keys(key_pair)));
       service_.push_back(
           ServicePtr(new Service(routing_table_[index], data_store_[index],
-                                 alternative_store_[index],
                                  GetPrivateKeyPtr(services_securifier_[index]),
                                  g_kKademliaK)));
       service_[index]->set_node_contact(service_contact_[index]);
@@ -1747,7 +1740,7 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
                                     key.String(), "");
     boost::posix_time::seconds ttl(3600);
     // attempt to find value before any stored
-  std::vector<ValueAndSignature> return_values_and_signatures;
+    std::vector<ValueAndSignature> return_values_and_signatures;
     std::vector<Contact> return_contacts;
     *done = false;
     *response_code = kGeneralError;
@@ -1843,7 +1836,6 @@ class RpcsMultiServerNodesTest : public CreateContactAndNodeId,
   NodeId node_id_;
   std::vector<RoutingTablePtr> routing_table_;
   std::vector<DataStorePtr> data_store_;
-  std::vector<AlternativeStorePtr> alternative_store_;
   std::vector<KeyPairPtr> services_securifier_;
   std::vector<ServicePtr> service_;
   std::vector<KeyPairPtr> rpcs_key_pair_;

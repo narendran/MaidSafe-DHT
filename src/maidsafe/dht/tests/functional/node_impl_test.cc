@@ -42,16 +42,6 @@ namespace maidsafe {
 namespace dht {
 namespace test {
 
-class TestAlternativeStoreReturnsTrue : public AlternativeStore {
- public:
-  ~TestAlternativeStoreReturnsTrue() {}
-  virtual bool Has(
-      const std::string&,
-      const ValidationData& = ValidationData()) const {
-    return true;
-  }
-};
-
 class NodeImplTest : public testing::TestWithParam<bool> {
  protected:
   typedef std::shared_ptr<maidsafe::dht::NodeContainer<NodeImpl>>
@@ -95,9 +85,8 @@ class NodeImplTest : public testing::TestWithParam<bool> {
       GetDataStore(env_->node_containers_[i])->key_value_index_->clear();
     }
     test_container_->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-                          AlternativeStorePtr(), client_only_node_, env_->k_,
-                          env_->alpha_, env_->beta_,
-                          env_->mean_refresh_interval_);
+                          client_only_node_, env_->k_, env_->alpha_,
+                          env_->beta_, env_->mean_refresh_interval_);
     test_container_->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
     (*env_->node_containers_.rbegin())->node()->GetBootstrapContacts(
         &bootstrap_contacts_);
@@ -152,9 +141,9 @@ class NodeImplTest : public testing::TestWithParam<bool> {
 TEST_P(NodeImplTest, FUNC_JoinLeave) {
   NodeContainerPtr node_container(
       new maidsafe::dht::NodeContainer<NodeImpl>());
-  node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-                       AlternativeStorePtr(), client_only_node_, env_->k_,
-                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(), client_only_node_,
+                       env_->k_, env_->alpha_, env_->beta_,
+                       env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   std::vector<Contact> bootstrap_contacts;
   (*env_->node_containers_.rbegin())->node()->GetBootstrapContacts(
@@ -633,7 +622,7 @@ TEST_P(NodeImplTest, FUNC_FindValue) {
       bootstrap_contacts_.clear();
     }
   }
-  // Test that a node with a key in its alternative store returns itself as a
+  // Test that a node with copy cached outside of DataStore returns itself as a
   // holder for that key when queried
   for (size_t j = 0; j != env_->num_full_nodes_; ++j) {
     if (env_->node_containers_[j]->node()->joined()) {
@@ -641,41 +630,40 @@ TEST_P(NodeImplTest, FUNC_FindValue) {
           node()->contact());
     }
   }
-  NodeContainerPtr alternative_container(
+  NodeContainerPtr cache_container(
       new maidsafe::dht::NodeContainer<NodeImpl>());
-  alternative_container->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-      AlternativeStorePtr(new TestAlternativeStoreReturnsTrue), false, env_->k_,
+  cache_container->Init(3, KeyPairPtr(), MessageHandlerPtr(), false, env_->k_,
       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
-  alternative_container->MakeAllCallbackFunctors(&env_->mutex_,
-                                                 &env_->cond_var_);
+  cache_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   (*env_->node_containers_.rbegin())->node()->GetBootstrapContacts(
         &bootstrap_contacts_);
   result = kPendingResult;
   {
     std::pair<Port, Port> port_range(8000, 65535);
-    result = alternative_container->Start(bootstrap_contacts_, port_range);
+    result = cache_container->Start(bootstrap_contacts_, port_range);
     ASSERT_EQ(kSuccess, result) << debug_msg_;
-    ASSERT_TRUE(alternative_container->node()->joined()) << debug_msg_;
+    ASSERT_TRUE(cache_container->node()->joined()) << debug_msg_;
+    cache_container->node()->set_check_cache_functor(
+        [](const std::string&) { return true; });  // NOLINT (Fraser)
   }
-  FindValueReturns alternative_find_value_returns;
+  FindValueReturns cached_find_value_returns;
   {
-    // Attempt to FindValue using the ID of the alternative
-    // store container as the key
+    // Attempt to FindValue using the ID of the cache_container node as the key
     boost::mutex::scoped_lock lock(env_->mutex_);
     test_container_->FindValue(
-        alternative_container->node()->contact().node_id(),
+        cache_container->node()->contact().node_id(),
         GetPrivateKeyPtr(test_container_->key_pair()));
     ASSERT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
                 test_container_->wait_for_find_value_functor()));
     test_container_->GetAndResetFindValueResult(
-        &alternative_find_value_returns);
-    EXPECT_TRUE(alternative_find_value_returns.values_and_signatures.empty());
-    EXPECT_EQ(alternative_container->node()->contact().node_id(),
-        alternative_find_value_returns.alternative_store_holder.node_id())
-        << "Expected: " << DebugId(alternative_container->node()->contact())
+        &cached_find_value_returns);
+    EXPECT_TRUE(cached_find_value_returns.values_and_signatures.empty());
+    EXPECT_EQ(cache_container->node()->contact().node_id(),
+        cached_find_value_returns.cached_copy_holder.node_id())
+        << "Expected: " << DebugId(cache_container->node()->contact())
         << "\tFound: "
-        << DebugId(alternative_find_value_returns.alternative_store_holder);
-    alternative_container->node()->Leave(&bootstrap_contacts_);
+        << DebugId(cached_find_value_returns.cached_copy_holder);
+    cache_container->node()->Leave(&bootstrap_contacts_);
   }
 
   // Verify that a FindValue on a key that is in every node returns an empty

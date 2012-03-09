@@ -78,7 +78,7 @@ enum ReturnCode {
   kUpdateTooFewNodes = -303009,
   kFailedToGetContact = -303010,
   kFailedToFindValue = 303011,  // value intentionally positive
-  kFoundAlternativeStoreHolder = 303012,  // value intentionally positive
+  kFoundCachedCopyHolder = 303012,  // value intentionally positive
   kIterativeLookupFailed = -303013,
   kContactFailedToRespond = -303014,
   kValueAlreadyExists = -303015,

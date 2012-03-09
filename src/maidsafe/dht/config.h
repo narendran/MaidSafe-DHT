@@ -51,8 +51,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace maidsafe {
 
-class AlternativeStore;
-
 namespace transport {
 class Transport;
 struct Endpoint;
@@ -81,8 +79,8 @@ typedef std::function<void(int)> JoinFunctor, StoreFunctor, DeleteFunctor,  // N
 
 // Functor for use in Node::FindValue.  Parameters in order are: return code,
 // value(s) and signature(s) if found, k closest nodes if value not found,
-// contact details of node holding value in its alternative_store, and contact
-// details of node needing a cache copy of the values.
+// contact details of node holding cached value outside of kademlia's DataStore,
+// and contact details of node needing a cache copy of the values.
 typedef std::function<void(FindValueReturns)> FindValueFunctor;
 
 // Functor for use in Node::FindNodes.  Parameters in order are: return code,
@@ -96,6 +94,8 @@ typedef std::function<void(int, Contact)> GetContactFunctor;
 // Functor to be used as a predicate in waits and timed_waits.
 typedef std::function<bool()> WaitFunctor;
 
+typedef std::function<bool(const std::string&)> CheckCacheFunctor;  // NOLINT (Fraser)
+
 
 typedef NodeId Key;
 typedef boost::asio::ip::address IP;
@@ -107,7 +107,6 @@ typedef std::shared_ptr<transport::Transport> TransportPtr;
 typedef std::shared_ptr<asymm::Keys> KeyPairPtr;
 typedef std::shared_ptr<asymm::PrivateKey> PrivateKeyPtr;
 typedef std::shared_ptr<asymm::PublicKey> PublicKeyPtr;
-typedef std::shared_ptr<AlternativeStore> AlternativeStorePtr;
 typedef std::shared_ptr<transport::Info> RankInfoPtr;
 
 

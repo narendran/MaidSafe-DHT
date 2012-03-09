@@ -146,9 +146,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   ASSERT_FALSE(online_contacts.empty());
   NodeContainerPtr node_container(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   std::vector<Contact> bootstrap_contacts(online_contacts);
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
@@ -162,9 +161,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   KeyPairPtr key_pair = node_container->key_pair();
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
@@ -177,9 +175,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   bootstrap_contacts.assign(1, node_container->node()->contact());
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
                                             std::make_pair(1025U, 65535U)));
@@ -192,9 +189,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   // network
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   bootstrap_contacts = online_contacts;
   bootstrap_contacts.insert(bootstrap_contacts.begin(),
@@ -209,9 +205,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   // position in the list followed by offline contacts - should fail to join
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   std::vector<Contact> offline_contacts;
   for (Port port = 5000; port < 5003; ++port) {
@@ -242,9 +237,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   // join
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   bootstrap_contacts = offline_contacts;
   EXPECT_EQ(kContactFailedToRespond,
@@ -258,9 +252,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   // should join the existing network
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   bootstrap_contacts = online_contacts;
   bootstrap_contacts.insert(bootstrap_contacts.end(), offline_contacts.begin(),
@@ -275,9 +268,8 @@ TEST_F(NodeTest, FUNC_Bootstrap) {
   // should join the existing network
   node_container = NodeContainerPtr(
       new maidsafe::dht::NodeContainer<Node>());
-  node_container->Init(3, key_pair, MessageHandlerPtr(),
-                       AlternativeStorePtr(), false, env_->k_, env_->alpha_,
-                       env_->beta_, env_->mean_refresh_interval_);
+  node_container->Init(3, key_pair, MessageHandlerPtr(), false, env_->k_,
+                       env_->alpha_, env_->beta_, env_->mean_refresh_interval_);
   node_container->MakeAllCallbackFunctors(&env_->mutex_, &env_->cond_var_);
   std::reverse(bootstrap_contacts.begin(), bootstrap_contacts.end());
   EXPECT_EQ(kSuccess, node_container->Start(bootstrap_contacts,
@@ -291,8 +283,7 @@ TEST_F(NodeTest, FUNC_JoinClient) {
   NodeContainerPtr client_node_container(
       new maidsafe::dht::NodeContainer<Node>());
   client_node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-                              AlternativeStorePtr(), true, env_->k_,
-                              env_->alpha_, env_->beta_,
+                              true, env_->k_, env_->alpha_, env_->beta_,
                               env_->mean_refresh_interval_);
   client_node_container->MakeAllCallbackFunctors(&env_->mutex_,
                                                  &env_->cond_var_);
@@ -337,7 +328,7 @@ TEST_F(NodeTest, FUNC_StoreAndFindSmallValue) {
                   find_value_returns.values_and_signatures.front().second,
                   chosen_container_->key_pair()->public_key));
   EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 }
@@ -374,7 +365,7 @@ TEST_F(NodeTest, FUNC_StoreAndFindBigValue) {
               find_value_returns.values_and_signatures.front().second,
               chosen_container_->key_pair()->public_key));
   EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 }
@@ -425,7 +416,7 @@ TEST_F(NodeTest, FUNC_StoreAndFindMultipleValues) {
                 find_value_returns.values_and_signatures.front().second,
                 chosen_container_->key_pair()->public_key));
     EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-    EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+    EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
     // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
     // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
   }
@@ -480,7 +471,7 @@ TEST_F(NodeTest, FUNC_MultipleNodesFindSingleValue) {
                 (*it).values_and_signatures.front().second,
                 chosen_container_->key_pair()->public_key));
     EXPECT_TRUE((*it).closest_nodes.empty());
-    EXPECT_EQ(Contact(), (*it).alternative_store_holder);
+    EXPECT_EQ(Contact(), (*it).cached_copy_holder);
     // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
     // EXPECT_NE(Contact(), (*it).needs_cache_copy);
   }
@@ -490,8 +481,7 @@ TEST_F(NodeTest, FUNC_ClientFindValue) {
   NodeContainerPtr client_node_container(
       new maidsafe::dht::NodeContainer<Node>());
   client_node_container->Init(3, KeyPairPtr(), MessageHandlerPtr(),
-                              AlternativeStorePtr(), true, env_->k_,
-                              env_->alpha_, env_->beta_,
+                              true, env_->k_, env_->alpha_, env_->beta_,
                               env_->mean_refresh_interval_);
   client_node_container->MakeAllCallbackFunctors(&env_->mutex_,
                                                  &env_->cond_var_);
@@ -534,7 +524,7 @@ TEST_F(NodeTest, FUNC_ClientFindValue) {
               find_value_returns.values_and_signatures.front().second,
               client_node_container->key_pair()->public_key));
   EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 }
@@ -571,7 +561,7 @@ TEST_F(NodeTest, FUNC_FindNonExistingValue) {
   EXPECT_EQ(kFailedToFindValue, find_value_returns.return_code);
   EXPECT_TRUE(find_value_returns.values_and_signatures.empty());
   EXPECT_FALSE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 }
@@ -674,7 +664,7 @@ TEST_F(NodeTest, FUNC_Update) {
               find_value_returns.values_and_signatures.front().second,
               chosen_container_->key_pair()->public_key));
   EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 
@@ -716,7 +706,7 @@ TEST_F(NodeTest, FUNC_Update) {
               find_value_returns.values_and_signatures.front().second,
               chosen_container_->key_pair()->public_key));
   EXPECT_TRUE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_NE(Contact(), find_value_returns.needs_cache_copy);
 }
@@ -802,7 +792,7 @@ TEST_F(NodeTest, FUNC_Delete) {
   EXPECT_EQ(kFailedToFindValue, find_value_returns.return_code);
   EXPECT_TRUE(find_value_returns.values_and_signatures.empty());
   EXPECT_FALSE(find_value_returns.closest_nodes.empty());
-  EXPECT_EQ(Contact(), find_value_returns.alternative_store_holder);
+  EXPECT_EQ(Contact(), find_value_returns.cached_copy_holder);
   // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
   // EXPECT_EQ(Contact(), find_value_returns.needs_cache_copy);
 }
