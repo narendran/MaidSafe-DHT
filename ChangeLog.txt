@@ -1,6 +1,18 @@
-v0.31.08 (WIP)
+v0.33.00 (WIP)
 --------------
 
+
+v0.32.00
+--------
+* Fix for demo ignoring --bootstrap parameter.
+* Porting ReadContactsFromFile fix.
+* OSX compatibility.
+* Updated Contact serialise/parse methods to use ios::binary.
+* Updated logging macro.
+* Contact serialisation and other changes for rudp.
+* Bugfix to RPcs test.
+* Added install_fast target to maidsafe-dht.
+* Various changes to match updated Common functions and to make use of C++11 features.
 
 v0.31.07
 --------
