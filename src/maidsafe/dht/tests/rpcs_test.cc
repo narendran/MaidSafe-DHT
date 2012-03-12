@@ -691,7 +691,6 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreAndFindAndDeleteValueXXXToBeRemoved) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   return_values_and_signatures.clear();
   return_contacts.clear();
@@ -773,14 +772,11 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMultipleRequest) {
                                  key.String(), ""));
     status_response.push_back(std::make_pair(false, -1));
   }
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    this->sender_crypto_key_id_.public_key);
-  std::string signature("");
+  std::string signature;
 
   for (size_t i = 0; i < 10; ++i) {
     if (i%2)
-      signature = "invalid signature";
+      signature = "";
     else
       signature = kvs_vector[i].signature;
     this->rpcs_->Store(key, kvs_vector[i].value, signature, ttl,
@@ -797,16 +793,17 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreMultipleRequest) {
       }
     }
   }
-  JoinNetworkLookup(this->service_key_pair_);
   this->StopAndReset();
 
   // Checking results
   for (int i = 0; i < 10; ++i) {
-    EXPECT_EQ(kSuccess, status_response[i].second);
-    if (i%2)
+    if (i%2) {
+      EXPECT_NE(kSuccess, status_response[i].second);
       EXPECT_FALSE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
-    else
+    } else {
+      EXPECT_EQ(kSuccess, status_response[i].second);
       EXPECT_TRUE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
+    }
   }
 }
 
@@ -928,15 +925,13 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreRefreshMultipleRequests) {
     EXPECT_TRUE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
     status_response.push_back(std::make_pair(false, -1));
     refresh_time_old_vector.push_back(this->GetRefreshTime(kvs_vector[i]));
-    AddTestValidation(this->service_key_pair_, sender_id.String(),
-                      this->sender_crypto_key_id_.public_key);
   }
   // Store Refresh rpc
   std::string req_signature;
   Sleep(boost::posix_time::seconds(2));
   for (size_t i = 0; i < 10; ++i) {
     if (i%2)
-      req_signature = "Invalid Request Signature";
+      req_signature = "";
     else
       req_signature = req_sig_vector[i].second;
     this->rpcs_->StoreRefresh(req_sig_vector[i].first, req_signature,
@@ -949,16 +944,16 @@ TYPED_TEST_P(RpcsTest, FUNC_StoreRefreshMultipleRequests) {
     while (!status_response[i].first)
       Sleep(boost::posix_time::milliseconds(1));
   }
-  JoinNetworkLookup(this->service_key_pair_);
   this->StopAndReset();
   // Check results
   for (size_t i = 0; i < 10; ++i) {
-    EXPECT_EQ(0, status_response[i].second);
     EXPECT_TRUE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
     if (i%2) {
+      EXPECT_NE(kSuccess, status_response[i].second);
       EXPECT_EQ(this->GetRefreshTime(kvs_vector[i]),
                 refresh_time_old_vector[i]);
     } else {
+      EXPECT_EQ(kSuccess, status_response[i].second);
       EXPECT_GT(this->GetRefreshTime(kvs_vector[i]),
                 refresh_time_old_vector[i]);
     }
@@ -1050,9 +1045,6 @@ TYPED_TEST_P(RpcsTest, FUNC_Delete) {
   this->AddToReceiverDataStore(kvs, this->sender_crypto_key_id_,
                                this->rpcs_contact_, request_signature);
   EXPECT_TRUE(IsKeyValueInDataStore(kvs, this->data_store_));
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    this->sender_crypto_key_id_.public_key);
 
   this->rpcs_->Delete(key, kvs.value, kvs.signature,
                       GetPrivateKeyPtr(this->rpcs_key_pair_),
@@ -1063,7 +1055,6 @@ TYPED_TEST_P(RpcsTest, FUNC_Delete) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   std::vector<ValueAndSignature> return_values_and_signatures;
   std::vector<Contact> return_contacts;
@@ -1144,9 +1135,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteNonExistingKey) {
       MakeKVS(this->sender_crypto_key_id_, 1024, key.String(), "");
 
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
-  AddTestValidation(this->service_key_pair_,
-                    this->rpcs_contact_.node_id().String(),
-                    this->sender_crypto_key_id_.public_key);
 
   this->rpcs_->Delete(key, kvs.value, kvs.signature,
       GetPrivateKeyPtr(this->rpcs_key_pair_),
@@ -1158,7 +1146,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteNonExistingKey) {
   this->StopAndReset();
   EXPECT_EQ(kSuccess, response_code);
 
-  JoinNetworkLookup(this->service_key_pair_);
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
 }
 
@@ -1233,8 +1220,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefresh) {
   this->AddToReceiverDataStore(kvs, crypto_key_data, sender, request_signature);
   EXPECT_TRUE(IsKeyValueInDataStore(kvs, this->data_store_));
 
-  AddTestValidation(this->service_key_pair_, sender_id.String(),
-                    crypto_key_data.public_key);
   // Deleting
   this->DeleteFromReceiverDataStore(kvs, crypto_key_data, sender,
                                     request_signature);
@@ -1250,7 +1235,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefresh) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   std::vector<ValueAndSignature> return_values_and_signatures;
   std::vector<Contact> return_contacts;
@@ -1292,8 +1276,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshStoredValue) {
   this->AddToReceiverDataStore(kvs, crypto_key_data, sender, request_sig);
   EXPECT_TRUE(IsKeyValueInDataStore(kvs, this->data_store_));
 
-  AddTestValidation(this->service_key_pair_, sender_id.String(),
-                    crypto_key_data.public_key);
   // Value not deleted
   RequestAndSignature request_signature("", "");
   EXPECT_TRUE(IsKeyValueInDataStore(kvs, this->data_store_));
@@ -1307,7 +1289,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshStoredValue) {
   while (!done)
     Sleep(boost::posix_time::milliseconds(10));
   EXPECT_NE(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
 
   std::vector<ValueAndSignature> return_values_and_signatures;
   std::vector<Contact> return_contacts;
@@ -1382,8 +1363,6 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshNonExistingKey) {
   Contact sender = this->ComposeContactWithKey(sender_id, 5001,
                                                crypto_key_data);
   protobuf::DeleteRequest delete_request = MakeDeleteRequest(sender, kvs);
-  AddTestValidation(this->service_key_pair_, sender_id.String(),
-                    crypto_key_data.public_key);
   std::string delete_message = delete_request.SerializeAsString();
   std::string delete_message_sig;
   asymm::Sign(delete_message, crypto_key_data.private_key, &delete_message_sig);
@@ -1398,12 +1377,9 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshNonExistingKey) {
   EXPECT_EQ(kSuccess, response_code);
 
   this->StopAndReset();
-  JoinNetworkLookup(this->service_key_pair_);
   EXPECT_FALSE(IsKeyValueInDataStore(kvs, this->data_store_));
 }
 
-// This test will fail (incorrectly allow values to be refreshed) until sender
-// signature checking is in place for DeleteRefresh
 TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMultipleRequests) {
   bool done(false);
   std::vector<KeyValueSignature> kvs_vector;
@@ -1430,14 +1406,12 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMultipleRequests) {
     req_sig_vector.push_back(request_signature);
     EXPECT_FALSE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
     refresh_time_old_vector.push_back(this->GetRefreshTime(kvs_vector[i]));
-    AddTestValidation(this->service_key_pair_, sender_id.String(),
-                      crypto_key_data.public_key);
   }
   // Delete Refresh rpc
   std::string req_signature;
   for (size_t i = 0; i < 10; ++i) {
     if (i%2)
-      req_signature = "Invalid Request Signature";
+      req_signature = "";
     else
       req_signature = req_sig_vector[i].second;
     this->rpcs_->DeleteRefresh(req_sig_vector[i].first, req_signature,
@@ -1455,15 +1429,15 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMultipleRequests) {
     }
   }
   this->StopAndReset();
-  JoinNetworkLookup(this->service_key_pair_);
   // Checking results
   for (size_t i = 0; i < 10; ++i) {
-    EXPECT_EQ(kSuccess, status_response[i].second);
     EXPECT_FALSE(IsKeyValueInDataStore(kvs_vector[i], this->data_store_));
     if (i%2) {
+      EXPECT_NE(kSuccess, status_response[i].second);
       EXPECT_EQ(this->GetRefreshTime(kvs_vector[i]),
                 refresh_time_old_vector[i]);
     } else {
+      EXPECT_EQ(kSuccess, status_response[i].second);
       EXPECT_GT(this->GetRefreshTime(kvs_vector[i]),
                 refresh_time_old_vector[i]);
     }
