@@ -943,6 +943,7 @@ TEST_F(DataStoreTest, FUNC_MultipleThreads) {
 
   // Run threads
   asio_service.Start(kThreadCount);
+  Sleep(kNetworkDelay * 2);
   asio_service.Stop();
 
   // Check results

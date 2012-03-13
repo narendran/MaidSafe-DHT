@@ -1865,10 +1865,9 @@ TEST_F(ServicesTest, FUNC_MultipleThreads) {
   // Running the threads
   asio_service.Start(kNumberOfThreads);
   Sleep(kNetworkDelay * 2);
+  asio_service.Stop();
 
   // Check results
-  asio_service.Stop();
-  Sleep(kNetworkDelay * 2);
   // Store
   EXPECT_TRUE(IsKeyValueInDataStore(k1_v1));
   EXPECT_TRUE(IsKeyValueInDataStore(k1_v2));
