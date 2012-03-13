@@ -96,6 +96,7 @@ class CreateContactAndNodeId {
  protected:
   Contact contact_;
   NodeId node_id_;
+  std::vector<NodeId> generated_ids_;
   std::shared_ptr<RoutingTable> routing_table_;
 };
 

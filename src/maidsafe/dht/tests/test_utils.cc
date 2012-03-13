@@ -94,7 +94,10 @@ void AsymGetPublicKeyAndValidation::DummyContactValidationGetter(
 CreateContactAndNodeId::CreateContactAndNodeId(uint16_t k)
     : contact_(),
       node_id_(NodeId::kRandomId),
-      routing_table_(new RoutingTable(node_id_, k)) {}
+      generated_ids_(),
+      routing_table_(new RoutingTable(node_id_, k)) {
+        generated_ids_.push_back(node_id_);;
+}
 
 NodeId CreateContactAndNodeId::GenerateUniqueRandomId(const NodeId &holder,
                                                       const int &pos) {
@@ -115,10 +118,13 @@ NodeId CreateContactAndNodeId::GenerateUniqueRandomId(const NodeId &holder,
     new_node_string = binary_bitset.to_string();
     new_node = NodeId(new_node_string, NodeId::kBinary);
     // make sure the new contact not already existed in the routing table
-    Contact result;
-    routing_table_->GetContact(new_node, &result);
-    if (result == Contact())
+    auto result = std::find(generated_ids_.begin(),
+                            generated_ids_.end(),
+                            new_node);
+    if (result == generated_ids_.end()) {
+      generated_ids_.push_back(new_node);
       repeat = false;
+    }
     ++times_of_try;
   } while (repeat && (times_of_try < 1000));
   // prevent deadlock, throw out an error message in case of deadlock
