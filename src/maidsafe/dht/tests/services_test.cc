@@ -1864,6 +1864,7 @@ TEST_F(ServicesTest, FUNC_MultipleThreads) {
                               "DoDeleteRefresh"));
   // Running the threads
   asio_service.Start(kNumberOfThreads);
+  Sleep(kNetworkDelay * 2);
 
   // Check results
   asio_service.Stop();
