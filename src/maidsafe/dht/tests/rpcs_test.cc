@@ -1444,74 +1444,74 @@ TYPED_TEST_P(RpcsTest, FUNC_DeleteRefreshMultipleRequests) {
   }
 }
 
-TYPED_TEST_P(RpcsTest, FUNC_DifferentSecurifier) {
-  // Another securifier
-  asymm::Keys key_pair2;
-  asymm::GenerateKeyPair(&key_pair2);
-  NodeId node_id2(NodeId::kRandomId);
-  key_pair2.identity = node_id2.String();
-  KeyPairPtr other_securifier(new asymm::Keys(key_pair2));
-
-
-  // Send Ping
-  bool done(false);
-  int response_code(kPendingResult), count(0);
-  this->rpcs_->Ping(this->GetPrivateKeyPtr(other_securifier),
-                    this->service_contact_,
-                    std::bind(&TestCallback, args::_1, args::_2,
-                              &done, &response_code));
-
-  while (!done && count++ < 1000)
-    Sleep(transport::kDefaultInitialTimeout / 1000);
-  EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
-
-  // Send FindValue
-  done = false;
-  response_code = kPendingResult;
-  count = 0;
-  this->PopulateRoutingTable(2*g_kKademliaK);
-  Key key = this->rpcs_contact_.node_id();
-  KeyValueSignature kvs = MakeKVS(this->sender_crypto_key_id_, 1024,
-                                  key.String(), "");
-  boost::posix_time::seconds ttl(3600);
-
-  std::vector<ValueAndSignature> return_values_and_signatures;
-  std::vector<Contact> return_contacts;
-  this->rpcs_->FindValue(key,
-                         g_kKademliaK,
-                         this->GetPrivateKeyPtr(other_securifier),
-                         this->service_contact_,
-                         std::bind(&TestFindValueCallback, args::_1, args::_2,
-                                   args::_3, args::_4, args::_5,
-                                   &return_values_and_signatures,
-                                   &return_contacts, &done, &response_code));
-  while (!done && count++ < 1000)
-    Sleep(transport::kDefaultInitialTimeout / 1000);
-  EXPECT_EQ(kFailedToFindValue, response_code);
-  EXPECT_EQ(g_kKademliaK, return_contacts.size());
-  JoinNetworkLookup(this->service_key_pair_);
-
-  // FindNodes
-  done = false;
-  response_code = kPendingResult;
-  count = 0;
-  return_contacts.clear();
-  this->rpcs_->FindNodes(key,
-                         g_kKademliaK,
-                         this->GetPrivateKeyPtr(other_securifier),
-                         this->service_contact_,
-                         std::bind(&TestFindNodesCallback, args::_1, args::_2,
-                                   args::_3, &return_contacts, &done,
-                                   &response_code));
-  while (!done && count++ < 1000)
-    Sleep(transport::kDefaultInitialTimeout / 1000);
-  EXPECT_EQ(g_kKademliaK, return_contacts.size());
-  EXPECT_EQ(kSuccess, response_code);
-  JoinNetworkLookup(this->service_key_pair_);
-
-  this->StopAndReset();
-}
+// TYPED_TEST_P(RpcsTest, FUNC_DifferentSecurifier) {
+//   // Another securifier
+//   asymm::Keys key_pair2;
+//   asymm::GenerateKeyPair(&key_pair2);
+//   NodeId node_id2(NodeId::kRandomId);
+//   key_pair2.identity = node_id2.String();
+//   KeyPairPtr other_securifier(new asymm::Keys(key_pair2));
+// 
+// 
+//   // Send Ping
+//   bool done(false);
+//   int response_code(kPendingResult), count(0);
+//   this->rpcs_->Ping(this->GetPrivateKeyPtr(other_securifier),
+//                     this->service_contact_,
+//                     std::bind(&TestCallback, args::_1, args::_2,
+//                               &done, &response_code));
+// 
+//   while (!done && count++ < 1000)
+//     Sleep(transport::kDefaultInitialTimeout / 1000);
+//   EXPECT_EQ(kSuccess, response_code);
+//   JoinNetworkLookup(this->service_key_pair_);
+// 
+//   // Send FindValue
+//   done = false;
+//   response_code = kPendingResult;
+//   count = 0;
+//   this->PopulateRoutingTable(2*g_kKademliaK);
+//   Key key = this->rpcs_contact_.node_id();
+//   KeyValueSignature kvs = MakeKVS(this->sender_crypto_key_id_, 1024,
+//                                   key.String(), "");
+//   boost::posix_time::seconds ttl(3600);
+// 
+//   std::vector<ValueAndSignature> return_values_and_signatures;
+//   std::vector<Contact> return_contacts;
+//   this->rpcs_->FindValue(key,
+//                          g_kKademliaK,
+//                          this->GetPrivateKeyPtr(other_securifier),
+//                          this->service_contact_,
+//                          std::bind(&TestFindValueCallback, args::_1, args::_2,
+//                                    args::_3, args::_4, args::_5,
+//                                    &return_values_and_signatures,
+//                                    &return_contacts, &done, &response_code));
+//   while (!done && count++ < 1000)
+//     Sleep(transport::kDefaultInitialTimeout / 1000);
+//   EXPECT_EQ(kFailedToFindValue, response_code);
+//   EXPECT_EQ(g_kKademliaK, return_contacts.size());
+//   JoinNetworkLookup(this->service_key_pair_);
+// 
+//   // FindNodes
+//   done = false;
+//   response_code = kPendingResult;
+//   count = 0;
+//   return_contacts.clear();
+//   this->rpcs_->FindNodes(key,
+//                          g_kKademliaK,
+//                          this->GetPrivateKeyPtr(other_securifier),
+//                          this->service_contact_,
+//                          std::bind(&TestFindNodesCallback, args::_1, args::_2,
+//                                    args::_3, &return_contacts, &done,
+//                                    &response_code));
+//   while (!done && count++ < 1000)
+//     Sleep(transport::kDefaultInitialTimeout / 1000);
+//   EXPECT_EQ(g_kKademliaK, return_contacts.size());
+//   EXPECT_EQ(kSuccess, response_code);
+//   JoinNetworkLookup(this->service_key_pair_);
+// 
+//   this->StopAndReset();
+// }
 
 REGISTER_TYPED_TEST_CASE_P(RpcsTest,
                            FUNC_PingNoTarget,
@@ -1536,8 +1536,8 @@ REGISTER_TYPED_TEST_CASE_P(RpcsTest,
                            FUNC_DeleteRefreshStoredValue,
                            FUNC_DeleteRefreshMalicious,
                            FUNC_DeleteRefreshNonExistingKey,
-                           FUNC_DeleteRefreshMultipleRequests,
-                           FUNC_DifferentSecurifier);
+                           FUNC_DeleteRefreshMultipleRequests);
+//                            FUNC_DifferentSecurifier);
 
 typedef ::testing::Types<transport::RudpTransport,
                          transport::TcpTransport,

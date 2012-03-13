@@ -96,7 +96,7 @@ CreateContactAndNodeId::CreateContactAndNodeId(uint16_t k)
       node_id_(NodeId::kRandomId),
       generated_ids_(),
       routing_table_(new RoutingTable(node_id_, k)) {
-        generated_ids_.push_back(node_id_);;
+        generated_ids_.push_back(node_id_);
 }
 
 NodeId CreateContactAndNodeId::GenerateUniqueRandomId(const NodeId &holder,
