@@ -91,7 +91,7 @@ class NodeTest : public testing::Test {
       : env_(NodesEnvironment<Node>::g_environment()),
         kTimeout_(transport::kDefaultInitialTimeout +
                   transport::kDefaultInitialTimeout),
-        chosen_node_index_(RandomUint32() % env_->node_containers_.size()),
+        chosen_node_index_(RandomUint32() % (env_->node_containers_.size() - 1)),
         chosen_container_(env_->node_containers_[chosen_node_index_]) {}
 
   bool IsTransportErrorCode(const int &code) {
@@ -100,7 +100,7 @@ class NodeTest : public testing::Test {
   }
 
   void TearDown() {
-    chosen_container_->Stop(nullptr);
+//     chosen_container_->Stop(nullptr);
   }
 
   std::shared_ptr<LocalNetwork<Node>> env_;
@@ -114,10 +114,12 @@ class NodeTest : public testing::Test {
 };
 
 TEST_F(NodeTest, FUNC_Ping) {
-  size_t target_index(RandomUint32() % env_->node_containers_.size());
-  while (chosen_node_index_ == target_index)
-    target_index = RandomUint32() % env_->node_containers_.size();
-  NodeContainerPtr target_container(env_->node_containers_[target_index]);
+  // The target node will be asked to leave the network later
+  // so, it shall not be chosen in any later on tests
+  // here, the target is set to be always the last one,
+  // and the chosen one will be picked up from the others
+  NodeContainerPtr target_container(
+      env_->node_containers_[env_->node_containers_.size() - 1]);
 
   int result(kGeneralError);
   boost::mutex::scoped_lock lock(env_->mutex_);
@@ -335,14 +337,14 @@ TEST_F(NodeTest, FUNC_StoreAndFindSmallValue) {
 
 TEST_F(NodeTest, FUNC_StoreAndFindBigValue) {
   const Key kKey(Key::kRandomId);
-  const std::string kValue(RandomString(1024 * 1024));
+  const std::string kValue(RandomString(1024 * 63));
   int result(kGeneralError);
   {
     boost::mutex::scoped_lock lock(env_->mutex_);
     chosen_container_->Store(kKey, kValue, "", bptime::pos_infin,
         PrivateKeyPtr(new asymm::PrivateKey(
             chosen_container_->key_pair()->private_key)));
-    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
+    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_ * 10,
                 chosen_container_->wait_for_store_functor()));
     chosen_container_->GetAndResetStoreResult(&result);
   }
@@ -387,7 +389,7 @@ TEST_F(NodeTest, FUNC_StoreAndFindMultipleValues) {
       chosen_container_->Store(keys.back(), values.back(), "",
           bptime::pos_infin, PrivateKeyPtr(new asymm::PrivateKey(
                                  chosen_container_->key_pair()->private_key)));
-      EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
+      EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_ * 3,
                   chosen_container_->wait_for_store_functor()));
       chosen_container_->GetAndResetStoreResult(&result);
     }
@@ -404,7 +406,7 @@ TEST_F(NodeTest, FUNC_StoreAndFindMultipleValues) {
       chosen_container_->FindValue(*key_itr,
           PrivateKeyPtr(new asymm::PrivateKey(
               chosen_container_->key_pair()->private_key)));
-      EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
+      EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_ * 3,
                   chosen_container_->wait_for_find_value_functor()));
       chosen_container_->GetAndResetFindValueResult(&find_value_returns);
     }
@@ -431,7 +433,7 @@ TEST_F(NodeTest, FUNC_MultipleNodesFindSingleValue) {
     chosen_container_->Store(kKey, kValue, "", bptime::pos_infin,
         PrivateKeyPtr(new asymm::PrivateKey(
             chosen_container_->key_pair()->private_key)));
-    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
+    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_ * 3,
                 chosen_container_->wait_for_store_functor()));
     chosen_container_->GetAndResetStoreResult(&result);
   }
@@ -456,7 +458,7 @@ TEST_F(NodeTest, FUNC_MultipleNodesFindSingleValue) {
         PrivateKeyPtr(new asymm::PrivateKey(
             env_->node_containers_[i]->key_pair()->private_key)));
   }
-  EXPECT_TRUE(env_->cond_var_.timed_wait(lock, bptime::minutes(2),
+  EXPECT_TRUE(env_->cond_var_.timed_wait(lock, bptime::minutes(4),
               std::bind(&MultiNodeFindValueResultReady, &sent_count,
                         &find_value_returns_container)));
 
@@ -474,6 +476,12 @@ TEST_F(NodeTest, FUNC_MultipleNodesFindSingleValue) {
     EXPECT_EQ(Contact(), (*it).cached_copy_holder);
     // TODO(Philip#5#): 2011-09-01 - Re-introduce when caching is implemented
     // EXPECT_NE(Contact(), (*it).needs_cache_copy);
+  }
+
+  // Restore the default FindValue callbacks
+  for (auto it(env_->node_containers_.begin());
+       it != env_->node_containers_.end(); ++it) {
+    (*it)->MakeFindValueFunctor(&env_->mutex_, &env_->cond_var_);
   }
 }
 
@@ -567,11 +575,10 @@ TEST_F(NodeTest, FUNC_FindNonExistingValue) {
 }
 
 TEST_F(NodeTest, FUNC_FindDeadNode) {
-  size_t target_index(RandomUint32() % env_->node_containers_.size());
-  while (chosen_node_index_ == target_index)
-    target_index = RandomUint32() % env_->node_containers_.size();
+  // Always trying to find the already dead node
+  // i.e. the last node which get kicked off during the test of PING
+  size_t target_index(env_->node_containers_.size() - 1);
   NodeContainerPtr target_container(env_->node_containers_[target_index]);
-  target_container->Stop(nullptr);
 
   boost::mutex::scoped_lock lock(env_->mutex_);
   chosen_container_->FindNodes(target_container->node()->contact().node_id());
@@ -586,21 +593,27 @@ TEST_F(NodeTest, FUNC_FindDeadNode) {
 }
 
 TEST_F(NodeTest, FUNC_JoinLeave)  {
-  EXPECT_TRUE(chosen_container_->node()->joined());
-  std::vector<Contact> bootstrap_contacts;
-  chosen_container_->node()->Leave(&bootstrap_contacts);
-  EXPECT_FALSE(chosen_container_->node()->joined());
-  EXPECT_FALSE(bootstrap_contacts.empty());
+  // always join the last node back (which already get kicked off)
+  NodeContainerPtr chosen_container(
+      env_->node_containers_[env_->node_containers_.size() - 1]);
+  EXPECT_FALSE(chosen_container->node()->joined());
 
   boost::mutex::scoped_lock lock(env_->mutex_);
-  chosen_container_->Join(chosen_container_->node()->contact().node_id(),
-                          bootstrap_contacts);
+  std::vector<Contact> bootstrap_contacts;
+  chosen_container_->node()->GetBootstrapContacts(&bootstrap_contacts);
+  EXPECT_FALSE(bootstrap_contacts.empty());
+  chosen_container->Join(chosen_container->node()->contact().node_id(),
+                         bootstrap_contacts);
   EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
-              chosen_container_->wait_for_join_functor()));
+              chosen_container->wait_for_join_functor()));
   int result(kGeneralError);
-  chosen_container_->GetAndResetJoinResult(&result);
+  chosen_container->GetAndResetJoinResult(&result);
   EXPECT_EQ(kSuccess, result);
-  EXPECT_TRUE(chosen_container_->node()->joined());
+  EXPECT_TRUE(chosen_container->node()->joined());
+
+  // kick off the last node again
+  chosen_container->node()->Leave(nullptr);
+  EXPECT_FALSE(chosen_container->node()->joined());
 }
 
 TEST_F(NodeTest, FUNC_StoreWithInvalidRequest) {
@@ -724,33 +737,37 @@ TEST_F(NodeTest, FUNC_FindNodes) {
   }
   EXPECT_EQ(kSuccess, result);
   EXPECT_EQ(env_->k_, closest_nodes.size());
+  // the kicked off node shall be excluded
+  std::vector<NodeId> node_ids;
+  for (auto it(env_->node_containers_.begin());
+       it != env_->node_containers_.end(); ++it) {
+    if (env_->node_containers_[env_->node_containers_.size() - 1]
+            ->node()->contact().node_id() != (*it)->node()->contact().node_id())
+      node_ids.push_back((*it)->node()->contact().node_id());
+  }
+
   for (auto it(closest_nodes.begin()); it != closest_nodes.end(); ++it) {
-    EXPECT_TRUE(WithinKClosest((*it).node_id(), kTargetId, env_->node_ids_,
-                env_->k_));
+    EXPECT_TRUE(WithinKClosest((*it).node_id(), kTargetId, node_ids, env_->k_));
   }
 
   // verify a node which has left isn't included in the returned list
   closest_nodes.clear();
-  // a random node index !=  chosen_node_index_
-  size_t index = (chosen_node_index_ + 1 +
-                   RandomUint32() % (env_->node_containers_.size() - 1)) %
-                       (env_->node_containers_.size());
   {
     boost::mutex::scoped_lock lock(env_->mutex_);
-    chosen_container_->Stop(nullptr);
-    env_->node_containers_[index]->FindNodes(
-        chosen_container_->node()->contact().node_id());
+    chosen_container_->FindNodes(
+        env_->node_containers_[env_->node_containers_.size() - 1]
+            ->node()->contact().node_id());
     EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
-                env_->node_containers_[index]->wait_for_find_nodes_functor()));
-    env_->node_containers_[index]->GetAndResetFindNodesResult(&result,
-                                                              &closest_nodes);
+                chosen_container_->wait_for_find_nodes_functor()));
+    chosen_container_->GetAndResetFindNodesResult(&result, &closest_nodes);
   }
   EXPECT_EQ(kSuccess, result);
   EXPECT_EQ(env_->k_, closest_nodes.size());
   EXPECT_EQ(closest_nodes.end(),
             std::find(closest_nodes.begin(),
                       closest_nodes.end(),
-                      chosen_container_->node()->contact()));
+                      env_->node_containers_[env_->node_containers_.size() - 1]
+                          ->node()->contact()));
 }
 
 TEST_F(NodeTest, FUNC_Delete) {
@@ -762,7 +779,7 @@ TEST_F(NodeTest, FUNC_Delete) {
     chosen_container_->Store(kKey, kValue, "", bptime::pos_infin,
         PrivateKeyPtr(new asymm::PrivateKey(
             chosen_container_->key_pair()->private_key)));
-    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_,
+    EXPECT_TRUE(env_->cond_var_.timed_wait(lock, kTimeout_ * 3,
                 chosen_container_->wait_for_store_functor()));
     chosen_container_->GetAndResetStoreResult(&result);
   }

@@ -74,7 +74,8 @@ int main(int argc, char **argv) {
 #if defined FUNCTIONAL_NODE_TEST
   testing::AddGlobalTestEnvironment(
       new maidsafe::dht::test::NodesEnvironment<
-          maidsafe::dht::Node>(10, 0, 3, 4, 3, 2, bptime::hours(1)));
+          maidsafe::dht::Node>(6, 0, 3, 3, 2, 1, bptime::hours(1)));
+//           maidsafe::dht::Node>(10, 0, 3, 4, 3, 2, bptime::hours(1)));
 #elif defined FUNCTIONAL_CHURN_TEST
   testing::AddGlobalTestEnvironment(
       new maidsafe::dht::test::NodesEnvironment<
