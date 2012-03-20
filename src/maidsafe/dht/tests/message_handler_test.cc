@@ -76,18 +76,17 @@ class KademliaMessageHandlerTest: public testing::Test {
 
   template<class T>
   T GetWrapper(std::string encrypted, std::string key) {
-    std::string encrypt_aes_seed = encrypted.substr(1, 512);
+    std::string encrypted_message(encrypted.substr(1));
     std::string decrypted_message;
+
     asymm::PrivateKey private_key;
     asymm::DecodePrivateKey(key, &private_key);
-    asymm::Decrypt(encrypt_aes_seed, private_key, &decrypted_message);
-    encrypt_aes_seed = decrypted_message;
-    std::string aes_key = encrypt_aes_seed.substr(0, 32);
-    std::string kIV = encrypt_aes_seed.substr(32, 16);
-    std::string serialised_message =
-        crypto::SymmDecrypt(encrypted.substr(513), aes_key, kIV);
+    asymm::Decrypt(encrypted_message, private_key, &decrypted_message);
+
+    std::string serialised_message;
     protobuf::WrapperMessage decrypted_msg;
-    decrypted_msg.ParseFromString(serialised_message);
+    decrypted_msg.ParseFromString(decrypted_message);
+
     T result;
     result.ParseFromString(decrypted_msg.payload());
     return result;
@@ -100,16 +99,12 @@ class KademliaMessageHandlerTest: public testing::Test {
     message.set_msg_type(request_type);
     message.set_payload(request.SerializeAsString());
     std::string result(1, kAsymmetricEncrypt);
-    std::string seed = RandomString(48);
-    std::string key = seed.substr(0, 32);
-    std::string kIV = seed.substr(32, 16);
-    std::string encrypt_message =
-        crypto::SymmEncrypt(message.SerializeAsString(), key, kIV);
-    std::string encrypt_aes_seed;
+
+    std::string encrypted_message;
     asymm::PublicKey public_key;
     asymm::DecodePublicKey(publick_key, &public_key);
-    asymm::Encrypt(seed, public_key, &encrypt_aes_seed);
-    result += encrypt_aes_seed + encrypt_message;
+    asymm::Encrypt(message.SerializeAsString(), public_key, &encrypted_message);
+    result += encrypted_message;
     return result;
   }
 
@@ -853,7 +848,7 @@ TEST_F(KademliaMessageHandlerTest, BEH_WrapMessageFindValueResponse) {
       msg_hndlr_no_securifier_.WrapMessage(response, kp.public_key);
   ASSERT_EQ("", result_no_securifier);
   std::string function_encrypt = msg_hndlr_->WrapMessage(response,
-                                                        kp.public_key);
+                                                         kp.public_key);
   std::string encode_pub_key;
   asymm::EncodePublicKey(kp.public_key, &encode_pub_key);
   std::string encode_priv_key;
@@ -1042,8 +1037,8 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessagePingRqst) {
   ASSERT_TRUE(request.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kPingRequest);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
@@ -1081,16 +1076,16 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessagePingRsp) {
   ASSERT_TRUE(response.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kPingResponse);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload,
-                                      kAsymmetricEncrypt,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       kAsymmetricEncrypt,
+                                       message_signature, info,
+                                       message_response, timeout);
   it = invoked_slots_->find(kPingResponse);
   total = (*it).second;
   ASSERT_EQ(1U, total);
@@ -1117,16 +1112,16 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFValRqst) {
   ASSERT_TRUE(request.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kFindValueRequest);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload,
-                                      kAsymmetricEncrypt,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       kAsymmetricEncrypt,
+                                       message_signature, info,
+                                       message_response, timeout);
   it = invoked_slots_->find(kFindValueRequest);
   total = (*it).second;
   ASSERT_EQ(1U, total);
@@ -1149,16 +1144,16 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFValRsp) {
   ASSERT_TRUE(response.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kFindValueResponse);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload,
-                                      kAsymmetricEncrypt,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       kAsymmetricEncrypt,
+                                       message_signature, info,
+                                       message_response, timeout);
   it = invoked_slots_->find(kFindValueResponse);
   total = (*it).second;
   ASSERT_EQ(1U, total);
@@ -1185,16 +1180,16 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFNodeRqst) {
   ASSERT_TRUE(request.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kFindNodesRequest);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload,
-                                      kAsymmetricEncrypt,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       kAsymmetricEncrypt,
+                                       message_signature, info,
+                                       message_response, timeout);
   it = invoked_slots_->find(kFindNodesRequest);
   total = (*it).second;
   ASSERT_EQ(1U, total);
@@ -1217,16 +1212,16 @@ TEST_F(KademliaMessageHandlerTest, BEH_ProcessSerialisedMessageFNodeRsp) {
   ASSERT_TRUE(response.IsInitialized());
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload, kNone,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       message_signature, info,
+                                       message_response, timeout);
   auto it = invoked_slots_->find(kFindNodesResponse);
   int total = (*it).second;
   ASSERT_EQ(0U, total);
 
   msg_hndlr_->ProcessSerialisedMessage(message_type, payload,
-                                      kAsymmetricEncrypt,
-                                      message_signature, info,
-                                      message_response, timeout);
+                                       kAsymmetricEncrypt,
+                                       message_signature, info,
+                                       message_response, timeout);
   it = invoked_slots_->find(kFindNodesResponse);
   total = (*it).second;
   ASSERT_EQ(1U, total);
