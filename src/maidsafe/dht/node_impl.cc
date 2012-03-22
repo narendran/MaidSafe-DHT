@@ -492,6 +492,12 @@ void NodeImpl::GetContact(const NodeId &node_id, GetContactFunctor callback) {
   OrderedContacts close_contacts(CreateOrderedContacts(close_nodes.begin(),
                                                        close_nodes.end(),
                                                        node_id));
+
+  if (close_contacts.empty()) {
+    asio_service_.post(std::bind(callback, kFailedToGetContact, Contact()));
+    return;
+  }
+
   // If we have the contact in our own routing table, ping it, otherwise start
   // a lookup for it.
   if ((*close_contacts.begin()).node_id() == node_id) {
@@ -607,6 +613,25 @@ void NodeImpl::GetBootstrapContacts(std::vector<Contact> *contacts) {
 
 void NodeImpl::StartLookup(LookupArgsPtr lookup_args) {
   BOOST_ASSERT(lookup_args->kNumContactsRequested >= k_);
+
+  auto itr = lookup_args->lookup_contacts.find(contact_);
+  bool found_own_contact(itr != lookup_args->lookup_contacts.end());
+  if (found_own_contact)
+    (*itr).second.rpc_state = ContactInfo::kRepliedOK;
+
+  int lookup_contacts_count(
+      static_cast<int>(lookup_args->lookup_contacts.size()));
+  if (lookup_contacts_count == 0 ||
+      (lookup_contacts_count == 1 && found_own_contact)) {
+    // This is the only node on the network - there will be no lookup
+    lookup_args->lookup_phase_complete = true;
+    asio_service_.post(std::bind(&NodeImpl::HandleCompletedLookup, this,
+                                 lookup_args,
+                                 lookup_args->lookup_contacts.end(),
+                                 lookup_contacts_count));
+    return;
+  }
+
   boost::mutex::scoped_lock lock(lookup_args->mutex);
   DoLookupIteration(lookup_args);
 }
@@ -616,11 +641,7 @@ void NodeImpl::DoLookupIteration(LookupArgsPtr lookup_args) {
   lookup_args->lookup_phase_complete = false;
   size_t good_contact_count(0), pending_result_count(0);
   bool wait_for_in_flight_rpcs(false);
-  auto itr = lookup_args->lookup_contacts.find(contact_);
-  if (itr != lookup_args->lookup_contacts.end() && !client_only_node_) {
-    (*itr).second.rpc_state = ContactInfo::kRepliedOK;
-  }
-  itr = lookup_args->lookup_contacts.begin();
+  auto itr = lookup_args->lookup_contacts.begin();
   while (itr != lookup_args->lookup_contacts.end() &&
          !wait_for_in_flight_rpcs) {
     switch ((*itr).second.rpc_state) {

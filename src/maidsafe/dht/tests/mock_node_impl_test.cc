@@ -705,6 +705,81 @@ class MockNodeImplTest : public CreateContactAndNodeId, public testing::Test {
   const bptime::seconds kTaskTimeout_;
 };  // MockNodeImplTest
 
+TEST_F(MockNodeImplTest, BEH_ZeroStateNetwork) {
+  // Store
+  int response_code(kSuccess);
+  bool done(false);
+  asymm::Keys crypto_key_data;
+  asymm::GenerateKeyPair(&crypto_key_data);
+  NodeId key = NodeId(NodeId::kRandomId);
+  KeyValueSignature kvs = MakeKVS(crypto_key_data, 1024, key.String(), "");
+  bptime::time_duration old_ttl(bptime::pos_infin);
+  node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
+                std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
+                          &response_code, &done));
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_EQ(kFoundTooFewNodes, response_code);
+
+  // Delete
+  response_code = kSuccess;
+  done = false;
+  node_->Delete(key, kvs.value, kvs.signature, private_key_,
+                std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
+                          &response_code, &done));
+
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_EQ(kFoundTooFewNodes, response_code);
+
+  // Update
+  response_code = kSuccess;
+  done = false;
+  KeyValueSignature kvs_new = MakeKVS(crypto_key_data, 1024, key.String(), "");
+  node_->Update(key, kvs_new.value, kvs_new.signature,
+                kvs.value, kvs.signature, old_ttl, private_key_,
+                std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
+                          &response_code, &done));
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_EQ(kFoundTooFewNodes, response_code);
+
+  // FindValue
+  done = false;
+  FindValueReturns results;
+  node_->data_store_.reset(new DataStore(bptime::seconds(1)));
+  node_->FindValue(key, private_key_,
+                    std::bind(&FindValueCallback, args::_1, &cond_var_,
+                              &results, &done));
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_EQ(kFailedToFindValue, results.return_code);
+  EXPECT_TRUE(results.values_and_signatures.empty());
+  EXPECT_TRUE((results.closest_nodes.size() == 1) &&
+      (results.closest_nodes[0] == node_->contact()));
+
+  // FindNodes
+  std::vector<Contact> lcontacts;
+  done = false;
+  node_->FindNodes(key, std::bind(&FindNodeCallback, rank_info_, args::_1,
+                                  args::_2, &mutex_, &cond_var_, &lcontacts,
+                                  &done));
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_TRUE((lcontacts.size() == 1) && (lcontacts[0] == node_->contact()));
+
+  // GetContact
+  Contact result;
+  response_code = kSuccess;
+  done = false;
+  node_->GetContact(key, std::bind(&GetContactCallback, args::_1, args::_2,
+                                   &result, &cond_var_, &response_code, &done));
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
+  EXPECT_EQ(kFailedToGetContact, response_code);
+  EXPECT_EQ(Contact(), result);
+}
+
 TEST_F(MockNodeImplTest, BEH_GetAllContacts) {
   PopulateRoutingTable(g_kKademliaK, 500);
   std::vector<Contact> contacts;
@@ -749,12 +824,8 @@ TEST_F(MockNodeImplTest, BEH_GetContact) {
     node_->GetContact(target_id, std::bind(&GetContactCallback, args::_1,
                                            args::_2, &result, &cond_var_,
                                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFailedToGetContact, response_code);
     EXPECT_EQ(Contact(), result);
   }
@@ -776,12 +847,8 @@ TEST_F(MockNodeImplTest, BEH_GetContact) {
     node_->GetContact(target_id, std::bind(&GetContactCallback, args::_1,
                                            args::_2, &result, &cond_var_,
                                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, response_code);
     EXPECT_EQ(target, result);
   }
@@ -900,12 +967,8 @@ TEST_F(MockNodeImplTest, BEH_Join) {
             &MockRpcs<transport::TcpTransport>::FindValueNoValueResponse,
             new_rpcs.get(), args::_1))));
     node_->Join(node_id_, bootstrap_contacts, callback);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     ASSERT_EQ(kSuccess, result);
     node_->Leave(nullptr);
   }
@@ -933,12 +996,8 @@ TEST_F(MockNodeImplTest, BEH_Join) {
             &MockRpcs<transport::TcpTransport>::FindValueNoValueResponse,
             new_rpcs.get(), args::_1))));
     node_->Join(node_id_, bootstrap_contacts, callback);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     ASSERT_EQ(kSuccess, result);
     node_->Leave(nullptr);
   }
@@ -974,12 +1033,8 @@ TEST_F(MockNodeImplTest, BEH_Join) {
             std::bind(&MockRpcs<transport::TcpTransport>::FindValueNoResponse,
                       new_rpcs.get(), args::_1))));
     node_->Join(node_id_, bootstrap_contacts, callback);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kContactFailedToRespond, result);
     node_->Leave(nullptr);
   }
@@ -1020,12 +1075,8 @@ TEST_F(MockNodeImplTest, BEH_Join) {
             std::bind(&MockRpcs<transport::TcpTransport>::StoreRefreshCallback,
                       new_rpcs.get(), args::_1))));
     node_->Join(node_id_, bootstrap_contacts, callback);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     ASSERT_EQ(kSuccess, result);
     node_->Leave(nullptr);
   }
@@ -1068,13 +1119,8 @@ TEST_F(MockNodeImplTest, BEH_Leave) {
           &MockRpcs<transport::TcpTransport>::FindValueNoValueResponse,
           new_rpcs.get(), args::_1))));
   node_->Join(node_id_, bootstrap_contacts, callback);
-  while (!done) {
-    bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-    if (!not_timed_out) {
-      done = true;
-    }
-    EXPECT_TRUE(not_timed_out);
-  }
+  EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                   [&done]() { return done; }));  // NOLINT (Fraser)
   ASSERT_EQ(kSuccess, result);
   node_->Leave(nullptr);
   ASSERT_FALSE(node_->joined());
@@ -1106,13 +1152,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
     node_->FindNodes(key, std::bind(&FindNodeCallback, rank_info_, args::_1,
                                     args::_2, &mutex_, &cond_var_, &lcontacts,
                                     &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out) {
-        done = true;
-      }
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_TRUE((lcontacts.size() == 1) && (lcontacts[0] == node_->contact()));
   }
   done = false;
@@ -1130,13 +1171,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                      std::bind(&FindNodeCallback, rank_info_, args::_1,
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out) {
-        done = true;
-      }
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK, lcontacts.size());
   }
   done = false;
@@ -1154,12 +1190,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                      std::bind(&FindNodeCallback, rank_info_, args::_1,
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK , lcontacts.size());
   }
   done = false;
@@ -1176,12 +1208,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                      std::bind(&FindNodeCallback, rank_info_, args::_1,
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK, lcontacts.size());
   }
   int count = 10 * g_kKademliaK;
@@ -1205,12 +1233,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                      std::bind(&FindNodeCallback, rank_info_, args::_1,
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     ASSERT_EQ(g_kKademliaK, lcontacts.size());
     EXPECT_NE(lcontacts[0], lcontacts[g_kKademliaK / 2]);
     EXPECT_NE(lcontacts[0], lcontacts[g_kKademliaK - 1]);
@@ -1244,12 +1268,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done),
                      g_kKademliaK / 2);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK * 3 / 2, lcontacts.size());
   }
 
@@ -1271,12 +1291,8 @@ TEST_F(MockNodeImplTest, BEH_FindNodes) {
                      std::bind(&FindNodeCallback, rank_info_, args::_1,
                                args::_2, &mutex_, &cond_var_, &lcontacts,
                                &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     if (new_rpcs->respond_contacts_->size() >= g_kKademliaK) {
       EXPECT_EQ(g_kKademliaK, lcontacts.size());
       EXPECT_NE(lcontacts[0], lcontacts[g_kKademliaK / 2]);
@@ -1346,12 +1362,8 @@ TEST_F(MockNodeImplTest, BEH_Store) {
     node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
                  std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, response_code);
   }
   new_rpcs->SetCountersToZero();
@@ -1377,20 +1389,14 @@ TEST_F(MockNodeImplTest, BEH_Store) {
     node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
                  std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     done = false;
     EXPECT_EQ(kStoreTooFewNodes, response_code);
-    while ((new_rpcs->num_of_deleted_ != g_kKademliaK) && !done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(
+        unique_lock_,
+        kTaskTimeout_,
+        [&]() { return (new_rpcs->num_of_deleted_ == g_kKademliaK) || done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK, new_rpcs->num_of_deleted_);
   }
   done = false;
@@ -1411,21 +1417,15 @@ TEST_F(MockNodeImplTest, BEH_Store) {
     node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
                  std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kStoreTooFewNodes, response_code);
     done = false;
     EXPECT_EQ(kStoreTooFewNodes, response_code);
-    while ((new_rpcs->num_of_deleted_ != g_kKademliaK) && !done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(
+        unique_lock_,
+        kTaskTimeout_,
+        [&]() { return (new_rpcs->num_of_deleted_ == g_kKademliaK) || done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK, new_rpcs->num_of_deleted_);
   }
   done = false;
@@ -1446,12 +1446,8 @@ TEST_F(MockNodeImplTest, BEH_Store) {
     node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
                  std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, response_code);
     // wait to ensure in case of wrong, the wrong deletion will be executed
     EXPECT_EQ(0, new_rpcs->num_of_deleted_);
@@ -1478,12 +1474,8 @@ TEST_F(MockNodeImplTest, BEH_Store) {
     node_->Store(key, kvs.value, kvs.signature, old_ttl, private_key_,
                  std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                            &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFoundTooFewNodes, response_code);
     EXPECT_EQ(0, new_rpcs->respond_);
     EXPECT_EQ(0, new_rpcs->no_respond_);
@@ -1531,12 +1523,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
     node_->Delete(key, kvs.value, kvs.signature, private_key_,
              std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                        &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, response_code);
   }
   done = false;
@@ -1557,12 +1545,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
              std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                        &response_code, &done));
 
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kDeleteTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
   }
@@ -1583,12 +1567,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
     node_->Delete(key, kvs.value, kvs.signature, private_key_,
              std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                        &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kDeleteTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
   }
@@ -1609,12 +1589,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
     node_->Delete(key, kvs.value, kvs.signature, private_key_,
              std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                        &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
   }
   done = false;
   new_rpcs->SetCountersToZero();
@@ -1637,12 +1613,8 @@ TEST_F(MockNodeImplTest, BEH_Delete) {
     node_->Delete(key, kvs.value, kvs.signature, private_key_,
              std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                        &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFoundTooFewNodes, response_code);
     EXPECT_EQ(0, new_rpcs->respond_);
     EXPECT_EQ(0, new_rpcs->no_respond_);
@@ -1699,12 +1671,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, response_code);
   }
   done = false;
@@ -1731,12 +1699,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kUpdateTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
     EXPECT_EQ(threshold_ - 1, new_rpcs->respond_);
@@ -1765,12 +1729,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kUpdateTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
     EXPECT_EQ(threshold_ - 1, new_rpcs->respond_);
@@ -1799,12 +1759,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kUpdateTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
     EXPECT_EQ(threshold_ - 1, new_rpcs->respond_);
@@ -1833,12 +1789,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kUpdateTooFewNodes, response_code);
     EXPECT_EQ(g_kKademliaK - threshold_ + 1, new_rpcs->no_respond_);
     EXPECT_EQ(threshold_ - 1, new_rpcs->respond_);
@@ -1870,12 +1822,8 @@ TEST_F(MockNodeImplTest, BEH_Update) {
                   kvs.value, kvs.signature, old_ttl, private_key_,
                   std::bind(&ErrorCodeCallback, args::_1, &cond_var_,
                             &response_code, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFoundTooFewNodes, response_code);
     EXPECT_EQ(0, new_rpcs->respond_);
     EXPECT_EQ(0, new_rpcs->no_respond_);
@@ -1903,12 +1851,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
     node_->FindValue(key, private_key_,
                      std::bind(&FindValueCallback, args::_1, &cond_var_,
                                &results, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFailedToFindValue, results.return_code);
     EXPECT_TRUE(results.values_and_signatures.empty());
     EXPECT_TRUE((results.closest_nodes.size() == 1) &&
@@ -1930,12 +1874,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
     node_->FindValue(key, private_key_,
                      std::bind(&FindValueCallback, args::_1, &cond_var_,
                                &results, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFailedToFindValue, results.return_code);
     EXPECT_TRUE(results.values_and_signatures.empty());
     EXPECT_EQ(g_kKademliaK, results.closest_nodes.size());
@@ -1960,12 +1900,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
     node_->FindValue(key, private_key_,
                      std::bind(&FindValueCallback, args::_1, &cond_var_,
                                &results, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kSuccess, results.return_code);
     EXPECT_TRUE(results.closest_nodes.empty());
     ASSERT_EQ(1, results.values_and_signatures.size());
@@ -1985,12 +1921,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
     node_->FindValue(key, private_key_,
                      std::bind(&FindValueCallback, args::_1, &cond_var_,
                                &results, &done));
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(kFailedToFindValue, results.return_code);
     EXPECT_TRUE(results.values_and_signatures.empty());
     EXPECT_EQ(g_kKademliaK, results.closest_nodes.size());
@@ -2012,12 +1944,8 @@ TEST_F(MockNodeImplTest, BEH_FindValue) {
                      std::bind(&FindValueCallback, args::_1, &cond_var_,
                                &results, &done),
                      g_kKademliaK / 2);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_EQ(g_kKademliaK * 3 / 2, results.closest_nodes.size());
   }
 }
@@ -2086,12 +2014,8 @@ TEST_F(MockNodeImplTest, BEH_Getters) {
         find_value_returns, booststrap_contacts, key,
         std::bind(&MockNodeImplTest::NodeImplJoinCallback, this, args::_1,
                   &result, &cond_var_, &done), true);
-    while (!done) {
-      bool not_timed_out = cond_var_.timed_wait(unique_lock_, kTaskTimeout_);
-      if (!not_timed_out)
-        done = true;
-      EXPECT_TRUE(not_timed_out);
-    }
+    EXPECT_TRUE(cond_var_.timed_wait(unique_lock_, kTaskTimeout_,
+                                     [&done]() { return done; }));  // NOLINT (Fraser)
     EXPECT_TRUE(local_node_->joined());
   }
   {

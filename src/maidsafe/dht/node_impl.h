@@ -62,6 +62,7 @@ class Rpcs;
 namespace test {
 class NodeImplTest;
 class MockNodeImplTest;
+class MockNodeImplTest_BEH_ZeroStateNetwork_Test;
 class MockNodeImplTest_BEH_ValidateContact_Test;
 class MockNodeImplTest_BEH_PingOldestContact_Test;
 class MockNodeImplTest_BEH_Join_Test;
@@ -233,6 +234,7 @@ class NodeImpl {
   friend class NodeContainer<maidsafe::dht::NodeImpl>;
   friend class test::NodeImplTest;
   friend class test::MockNodeImplTest;
+  friend class test::MockNodeImplTest_BEH_ZeroStateNetwork_Test;
   friend class test::MockNodeImplTest_BEH_ValidateContact_Test;
   friend class test::MockNodeImplTest_BEH_PingOldestContact_Test;
   friend class test::MockNodeImplTest_BEH_Join_Test;
