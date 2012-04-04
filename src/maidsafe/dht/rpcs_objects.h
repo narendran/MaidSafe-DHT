@@ -28,28 +28,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef MAIDSAFE_DHT_RPCS_OBJECTS_H_
 #define MAIDSAFE_DHT_RPCS_OBJECTS_H_
 
-#include <cstdint>
+#include <map>
 #include <string>
+#include <utility>
 
-#ifdef __MSVC__
-#  pragma warning(push)
-#  pragma warning(disable: 4244)
-#endif
-#include "boost/multi_index_container.hpp"
-#include "boost/multi_index/composite_key.hpp"
-#include "boost/multi_index/ordered_index.hpp"
-#include "boost/multi_index/identity.hpp"
-#include "boost/multi_index/member.hpp"
-#include "boost/multi_index/mem_fun.hpp"
-#ifdef __MSVC__
-#  pragma warning(pop)
-#endif
-#include "boost/thread/shared_mutex.hpp"
+#include "boost/thread/mutex.hpp"
 #include "boost/thread/locks.hpp"
-#include "maidsafe/transport/transport.h"
 
 #include "maidsafe/dht/config.h"
-#include "maidsafe/dht/message_handler.h"
 #include "maidsafe/dht/version.h"
 
 #if MAIDSAFE_DHT_VERSION != 3300
@@ -62,31 +48,6 @@ namespace maidsafe  {
 
 namespace dht {
 
-struct ConnectedObject {
-  ConnectedObject(const TransportPtr transport,
-       const MessageHandlerPtr message_handler,
-       const uint32_t index)
-      : transport_ptr(transport),
-        message_handler_ptr(message_handler),
-        this_index(index) {}
-
-  TransportPtr transport_ptr;
-  MessageHandlerPtr message_handler_ptr;
-  uint32_t this_index;
-};
-
-struct TagIndexId {};
-
-typedef boost::multi_index::multi_index_container<
-  ConnectedObject,
-  boost::multi_index::indexed_by<
-    boost::multi_index::ordered_unique<
-      boost::multi_index::tag<TagIndexId>,
-      BOOST_MULTI_INDEX_MEMBER(ConnectedObject, uint32_t, this_index)
-    >
-  >
-> ConnectedObjectsContainer;
-
 // This class temporarily holds the connected objects of Rpcs to ensure all
 // resources can be correctly released and no memory leaked
 class ConnectedObjectsList  {
@@ -94,7 +55,7 @@ class ConnectedObjectsList  {
   ConnectedObjectsList();
 
   ~ConnectedObjectsList();
-  // Adds a connected object into the multi index
+  // Adds a connected object into the container
   // return the index of those objects in the container
   uint32_t AddObject(const TransportPtr transport,
                      const MessageHandlerPtr message_handler);
@@ -106,21 +67,13 @@ class ConnectedObjectsList  {
   // Return the TransportPtr of the index
   TransportPtr GetTransport(uint32_t index);
 
-  // Returns the size of the connected objects MI
+  // Returns the size of the connected objects container
   size_t Size();
 
  private:
-  typedef boost::shared_lock<boost::shared_mutex> SharedLock;
-  typedef boost::upgrade_lock<boost::shared_mutex> UpgradeLock;
-  typedef boost::unique_lock<boost::shared_mutex> UniqueLock;
-  typedef boost::upgrade_to_unique_lock<boost::shared_mutex>
-          UpgradeToUniqueLock;
-
-  /**  Multi_index container of connected objects */
-  std::shared_ptr<ConnectedObjectsContainer> objects_container_;
-  /** Thread safe shared mutex */
-  boost::shared_mutex shared_mutex_;
-  /** Global Counter used as an index for each added object */
+  std::map<uint32_t, std::pair<TransportPtr, MessageHandlerPtr>>
+      objects_container_;
+  boost::mutex mutex_;
   uint32_t index_;
 };
 

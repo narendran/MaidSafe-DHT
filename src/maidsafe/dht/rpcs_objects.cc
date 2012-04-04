@@ -27,58 +27,51 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "maidsafe/dht/rpcs_objects.h"
 
+#include "maidsafe/dht/log.h"
+
 namespace maidsafe {
 
 namespace dht {
 
 ConnectedObjectsList::ConnectedObjectsList()
-    : objects_container_(new ConnectedObjectsContainer),
-      shared_mutex_(),
+    : objects_container_(),
+      mutex_(),
       index_(0) {}
 
-ConnectedObjectsList::~ConnectedObjectsList() {}
+ConnectedObjectsList::~ConnectedObjectsList() {
+  boost::mutex::scoped_lock lock(mutex_);
+  if (!objects_container_.empty())
+    DLOG(WARNING) << "~ConnectedObjectsList - Still "
+                  << objects_container_.size() << " objects pending.";
+}
 
 uint32_t ConnectedObjectsList::AddObject(
     const TransportPtr transport,
     const MessageHandlerPtr message_handler) {
-  ConnectedObject object(transport, message_handler, index_);
-  UniqueLock unique_lock(shared_mutex_);
-  ConnectedObjectsContainer::index<TagIndexId>::type& index_by_index_id =
-      objects_container_->get<TagIndexId>();
-  index_by_index_id.insert(object);
-  uint32_t result = index_;
-  // increment the counter
-  // TODO(qi.ma@maidsafe.net): should some kind of range check to applied here?
-  ++index_;
-  return result;
+  boost::mutex::scoped_lock lock(mutex_);
+  while (objects_container_.count(index_) > 0)
+    ++index_;
+  objects_container_.insert(std::make_pair(
+      index_, std::make_pair(transport, message_handler)));
+  return index_++;
 }
 
 bool ConnectedObjectsList::RemoveObject(uint32_t index) {
-  UpgradeLock upgrade_lock(shared_mutex_);
-  ConnectedObjectsContainer::index<TagIndexId>::type& index_by_index_id =
-      objects_container_->get<TagIndexId>();
-  auto it = index_by_index_id.find(index);
-  if (it == index_by_index_id.end())
-    return false;
-  UpgradeToUniqueLock unique_lock(upgrade_lock);
-  // Remove the entry from multi index
-  index_by_index_id.erase(it);
-  return true;
+  boost::mutex::scoped_lock lock(mutex_);
+  return objects_container_.erase(index) > 0;
 }
 
 TransportPtr ConnectedObjectsList::GetTransport(uint32_t index) {
-  SharedLock shared_lock(shared_mutex_);
-  ConnectedObjectsContainer::index<TagIndexId>::type& index_by_index_id =
-      objects_container_->get<TagIndexId>();
-  auto it = index_by_index_id.find(index);
-  if (it == index_by_index_id.end())
+  boost::mutex::scoped_lock lock(mutex_);
+  auto it = objects_container_.find(index);
+  if (it == objects_container_.end())
     return TransportPtr();
-  return (*it).transport_ptr;
+  return (*it).second.first;
 }
 
 size_t ConnectedObjectsList::Size() {
-  SharedLock shared_lock(shared_mutex_);
-  return objects_container_->size();
+  boost::mutex::scoped_lock lock(mutex_);
+  return objects_container_.size();
 }
 
 }  // namespace dht
