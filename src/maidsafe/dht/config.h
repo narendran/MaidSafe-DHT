@@ -129,6 +129,12 @@ const double kMinSuccessfulPecentageUpdate(0.75);
 // routing table.
 const uint16_t kFailedRpcTolerance(2);
 
+// The number of RPCs allowed to be sent out at the same time.
+const uint32_t kMaxParallelRpcs(250);
+
+// Time to wait before giving up when max parallel RPCs limit reached.
+const boost::posix_time::seconds kRpcQueueWaitTimeout(2);
+
 // The minimum number of directly-connected contacts returned by
 // GetBootstrapContacts.  If there are less than this, the list has all other
 // known contacts appended.

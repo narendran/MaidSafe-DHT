@@ -32,8 +32,10 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string>
 #include <utility>
 
+#include "boost/thread/condition_variable.hpp"
 #include "boost/thread/mutex.hpp"
-#include "boost/thread/locks.hpp"
+
+#include "maidsafe/transport/transport.h"
 
 #include "maidsafe/dht/config.h"
 #include "maidsafe/dht/version.h"
@@ -52,9 +54,12 @@ namespace dht {
 // resources can be correctly released and no memory leaked
 class ConnectedObjectsList  {
  public:
-  ConnectedObjectsList();
+  typedef std::map<uint32_t, std::pair<TransportPtr, MessageHandlerPtr>>
+      ObjectsContainer;
 
+  ConnectedObjectsList();
   ~ConnectedObjectsList();
+
   // Adds a connected object into the container
   // return the index of those objects in the container
   uint32_t AddObject(const TransportPtr transport,
@@ -64,6 +69,12 @@ class ConnectedObjectsList  {
   // Returns true if successfully removed or false otherwise.
   bool RemoveObject(uint32_t index);
 
+  static void TryToSend(boost::asio::io_service &asio_service,  // NOLINT
+                        const TransportPtr transport,
+                        const std::string &data,
+                        const transport::Endpoint &endpoint,
+                        const transport::Timeout &timeout);
+
   // Return the TransportPtr of the index
   TransportPtr GetTransport(uint32_t index);
 
@@ -71,10 +82,14 @@ class ConnectedObjectsList  {
   size_t Size();
 
  private:
-  std::map<uint32_t, std::pair<TransportPtr, MessageHandlerPtr>>
-      objects_container_;
-  boost::mutex mutex_;
+  ConnectedObjectsList(const ConnectedObjectsList&);
+  ConnectedObjectsList& operator=(const ConnectedObjectsList&);
+
+  ObjectsContainer objects_container_;
+  static boost::mutex mutex_;
+  static boost::condition_variable cond_var_;
   uint32_t index_;
+  static size_t total_count_;
 };
 
 }  // namespace dht

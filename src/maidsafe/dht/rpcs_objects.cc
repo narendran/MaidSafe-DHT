@@ -33,24 +33,36 @@ namespace maidsafe {
 
 namespace dht {
 
+// ConnectedObjectsList::ObjectsContainer
+//     ConnectedObjectsList::objects_container_;
+boost::mutex ConnectedObjectsList::mutex_;
+boost::condition_variable ConnectedObjectsList::cond_var_;
+size_t ConnectedObjectsList::total_count_(0);
+
 ConnectedObjectsList::ConnectedObjectsList()
     : objects_container_(),
-      mutex_(),
       index_(0) {}
 
 ConnectedObjectsList::~ConnectedObjectsList() {
   boost::mutex::scoped_lock lock(mutex_);
-  if (!objects_container_.empty())
+  if (!objects_container_.empty()) {
+    total_count_ -= objects_container_.size();
     DLOG(WARNING) << "~ConnectedObjectsList - Still "
                   << objects_container_.size() << " objects pending.";
+  }
+  cond_var_.notify_all();
 }
 
 uint32_t ConnectedObjectsList::AddObject(
     const TransportPtr transport,
     const MessageHandlerPtr message_handler) {
   boost::mutex::scoped_lock lock(mutex_);
-  while (objects_container_.count(index_) > 0)
+  while (index_ == 0 || objects_container_.count(index_) > 0)
     ++index_;
+//   if (index_ % 50 == 0)
+//     DLOG(INFO) << "AddObject - Map has " << objects_container_.size()
+//                << " entries, total count is " << total_count_;
+  ++total_count_;
   objects_container_.insert(std::make_pair(
       index_, std::make_pair(transport, message_handler)));
   return index_++;
@@ -58,7 +70,39 @@ uint32_t ConnectedObjectsList::AddObject(
 
 bool ConnectedObjectsList::RemoveObject(uint32_t index) {
   boost::mutex::scoped_lock lock(mutex_);
-  return objects_container_.erase(index) > 0;
+  if (objects_container_.erase(index) == 0)
+    return false;
+  --total_count_;
+  cond_var_.notify_all();
+  return true;
+}
+
+void ConnectedObjectsList::TryToSend(boost::asio::io_service &asio_service,  // NOLINT
+                                     const TransportPtr transport,
+                                     const std::string &data,
+                                     const transport::Endpoint &endpoint,
+                                     const transport::Timeout &timeout) {
+  bool can_send(false);
+  uint32_t total_count(0);
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    can_send = cond_var_.timed_wait(lock, kRpcQueueWaitTimeout, [&]()->bool {
+      return total_count_ < kMaxParallelRpcs;
+    });
+    total_count = total_count_;
+  }
+  if (can_send) {
+    transport->Send(data, endpoint, timeout);
+  } else {
+    DLOG(ERROR) << "TryToSend - Too many concurrent RPCs, total count is "
+                << total_count;
+    asio_service.post(std::bind(
+        [](const TransportPtr transport, const transport::Endpoint &endpoint) {
+          (*transport->on_error())(transport::kSendTimeout, endpoint);
+        },
+        transport,
+        endpoint));
+  }
 }
 
 TransportPtr ConnectedObjectsList::GetTransport(uint32_t index) {

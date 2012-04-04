@@ -257,9 +257,9 @@ void Rpcs<TransportType>::Ping(PrivateKeyPtr private_key,
                 transport::Info(), protobuf::PingResponse(), object_indx,
                 callback, message, rpcs_failure_peer));
   DLOG(INFO) << "\t2 " << DebugId(contact_) << " PING to " << DebugId(peer);
-  transport->Send(message,
-                  peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -292,8 +292,9 @@ void Rpcs<TransportType>::FindValue(const Key &key,
       protobuf::FindValueResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " FIND_VALUE to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -326,8 +327,9 @@ void Rpcs<TransportType>::FindNodes(const Key &key,
       protobuf::FindNodesResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " FIND_NODES to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -365,8 +367,9 @@ void Rpcs<TransportType>::Store(const Key &key,
       protobuf::StoreResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " STORE to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -402,8 +405,9 @@ void Rpcs<TransportType>::StoreRefresh(
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " STORE_REFRESH to "
              << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -439,8 +443,9 @@ void Rpcs<TransportType>::Delete(const Key &key,
       protobuf::DeleteResponse(), object_indx, callback, message,
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE to " << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -476,8 +481,9 @@ void Rpcs<TransportType>::DeleteRefresh(
       rpcs_failure_peer));
   DLOG(INFO) << "\t" << DebugId(contact_) << " DELETE_REFRESH to "
              << DebugId(peer);
-  transport->Send(message, peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -500,9 +506,9 @@ void Rpcs<TransportType>::Downlist(const std::vector<NodeId> &node_ids,
 
   DLOG(INFO) << "\t" << DebugId(contact_) << " DOWNLIST " << downlist_ids
             << " to " << DebugId(peer);
-  transport->Send(message,
-                  peer.PreferredEndpoint(),
-                  transport::kDefaultInitialTimeout);
+  ConnectedObjectsList::TryToSend(asio_service_, transport, message,
+                                  peer.PreferredEndpoint(),
+                                  transport::kDefaultInitialTimeout);
 }
 
 template <typename TransportType>
@@ -521,9 +527,10 @@ void Rpcs<TransportType>::PingCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(message,
-                    rpcs_failure_peer->peer.PreferredEndpoint(),
-                    transport::kDefaultInitialTimeout);
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
+        transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
     if (transport_condition != transport::kSuccess) {
@@ -551,8 +558,9 @@ void Rpcs<TransportType>::FindValueCallback(
     (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
@@ -622,8 +630,9 @@ void Rpcs<TransportType>::FindNodesCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
@@ -664,8 +673,9 @@ void Rpcs<TransportType>::StoreCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
@@ -693,8 +703,9 @@ void Rpcs<TransportType>::StoreRefreshCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
@@ -722,8 +733,9 @@ void Rpcs<TransportType>::DeleteCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
@@ -751,8 +763,9 @@ void Rpcs<TransportType>::DeleteRefreshCallback(
       (rpcs_failure_peer->rpcs_failure < kFailureTolerance_)) {
     ++(rpcs_failure_peer->rpcs_failure);
     TransportPtr transport = connected_objects_.GetTransport(index);
-    transport->Send(
-        message, rpcs_failure_peer->peer.PreferredEndpoint(),
+    ConnectedObjectsList::TryToSend(
+        asio_service_, transport, message,
+        rpcs_failure_peer->peer.PreferredEndpoint(),
         transport::kDefaultInitialTimeout);
   } else {
     connected_objects_.RemoveObject(index);
