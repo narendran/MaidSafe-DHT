@@ -96,12 +96,9 @@ void ConnectedObjectsList::TryToSend(boost::asio::io_service &asio_service,  // 
   } else {
     DLOG(ERROR) << "TryToSend - Too many concurrent RPCs, total count is "
                 << total_count;
-    asio_service.post(std::bind(
-        [](const TransportPtr transport, const transport::Endpoint &endpoint) {
-          (*transport->on_error())(transport::kSendTimeout, endpoint);
-        },
-        transport,
-        endpoint));
+    asio_service.post([transport, endpoint]() {
+        (*transport->on_error())(transport::kSendTimeout, endpoint);
+    });
   }
 }
 

@@ -50,8 +50,9 @@ namespace maidsafe  {
 
 namespace dht {
 
-// This class temporarily holds the connected objects of Rpcs to ensure all
-// resources can be correctly released and no memory leaked
+/* This class temporarily holds the connected objects of RPCs to ensure all
+ * resources can be correctly released and no memory leaked.
+ */
 class ConnectedObjectsList  {
  public:
   typedef std::map<uint32_t, std::pair<TransportPtr, MessageHandlerPtr>>
@@ -60,25 +61,24 @@ class ConnectedObjectsList  {
   ConnectedObjectsList();
   ~ConnectedObjectsList();
 
-  // Adds a connected object into the container
-  // return the index of those objects in the container
+  // Adds connected objects to the container and returns their index.
   uint32_t AddObject(const TransportPtr transport,
                      const MessageHandlerPtr message_handler);
 
-  // Remove an object based on the index
-  // Returns true if successfully removed or false otherwise.
+  // Tries to remove existing entry based on index, returns whether successful.
   bool RemoveObject(uint32_t index);
 
+  // Sends message if concurrent RPCs below limit, otherwise calls OnError.
   static void TryToSend(boost::asio::io_service &asio_service,  // NOLINT
                         const TransportPtr transport,
                         const std::string &data,
                         const transport::Endpoint &endpoint,
                         const transport::Timeout &timeout);
 
-  // Return the TransportPtr of the index
+  // Returns an existing transport entry based on index.
   TransportPtr GetTransport(uint32_t index);
 
-  // Returns the size of the connected objects container
+  // Returns the number of connected objects entries.
   size_t Size();
 
  private:
