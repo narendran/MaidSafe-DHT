@@ -419,30 +419,26 @@ int NodeContainer<NodeType>::Start(
     transport::Endpoint endpoint(
         ips.empty() ? IP::from_string("127.0.0.1") : ips.front(), 0);
     int result(transport::kError);
-    std::vector<Port> try_ports;
-    if (port_range.first == port_range.second) {
-      try_ports.reserve(1);
-      try_ports.push_back(port_range.first);
-    } else  {
-      if (port_range.first > port_range.second)
-        port_range = std::make_pair(port_range.second, port_range.first);
-      try_ports.reserve(port_range.second - port_range.first);
-      for (Port port(port_range.first); port != port_range.second; ++port)
-        try_ports.push_back(port);
-      std::random_shuffle(try_ports.begin(), try_ports.end());
-    }
-    for (auto itr(try_ports.begin()); itr != try_ports.end(); ++itr) {
-      endpoint.port = *itr;
-      result = listening_transport_->StartListening(endpoint);
-      if (transport::kSuccess == result) {
-        break;
-      } else {
-        listening_transport_->StopListening();
+    std::set<Port> tried_ports;
+    if (port_range.first == port_range.second)
+      ++port_range.second;
+    else if (port_range.first > port_range.second)
+      std::swap(port_range.first, port_range.second);
+    uint16_t range(port_range.second - port_range.first);
+    while (result != transport::kSuccess &&
+           tried_ports.size() < static_cast<size_t>(range)) {
+      endpoint.port = port_range.first +
+                      static_cast<uint16_t>(RandomUint32() % range);
+      if (tried_ports.count(endpoint.port) == 0) {
+        result = listening_transport_->StartListening(endpoint);
+        if (transport::kSuccess != result) {
+          listening_transport_->StopListening();
+          tried_ports.insert(endpoint.port);
+        }
       }
     }
-    if (transport::kSuccess != result) {
+    if (result != transport::kSuccess)
       return result;
-    }
   }
 
   boost::mutex mutex;
