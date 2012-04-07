@@ -83,7 +83,7 @@ void ConnectedObjectsList::TryToSend(boost::asio::io_service &asio_service,  // 
                                      const transport::Endpoint &endpoint,
                                      const transport::Timeout &timeout) {
   bool can_send(false);
-  uint32_t total_count(0);
+  size_t total_count(0);
   {
     boost::mutex::scoped_lock lock(mutex_);
     can_send = cond_var_.timed_wait(lock, kRpcQueueWaitTimeout, [&]()->bool {
