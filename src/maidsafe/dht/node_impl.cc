@@ -51,6 +51,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/routing_table.h"
 #include "maidsafe/dht/service.h"
 #include "maidsafe/dht/utils.h"
+#include "boost/format.hpp"
 
 namespace args = std::placeholders;
 
@@ -465,6 +466,9 @@ void NodeImpl::FoundValueLocally(const FindValueReturns &find_value_returns,
 void NodeImpl::FindNodes(const Key &key,
                          FindNodesFunctor callback,
                          const uint16_t &extra_contacts) {
+	NodeId nodeid=contact_.node_id();
+	ULOG(INFO)<<boost::format("Node Id : %1%")%(nodeid.ToStringEncoded(NodeId::kBase64));
+	//Key key1 = nodeid.kBase64;
   if (!joined_) {
     return asio_service_.post(std::bind(&NodeImpl::NotJoined<FindNodesFunctor>,
                                         this, callback));
@@ -476,6 +480,22 @@ void NodeImpl::FindNodes(const Key &key,
   StartLookup(find_nodes_args);
 }
 
+void NodeImpl::GetPeers(FindNodesFunctor callback,
+        const uint16_t &extra_contacts){
+	ULOG(INFO) << "Reached the actual implementation of Getpeers";
+	NodeId nodeid=contact_.node_id();
+	ULOG(INFO)<<boost::format("Node Id : %1%")%(nodeid.ToStringEncoded(NodeId::kBase64));
+	Key key = nodeid;
+	 /* if (!joined_) {
+		return asio_service_.post(std::bind(&NodeImpl::NotJoined<FindNodesFunctor>,
+											this, callback));
+	  }*/
+	  OrderedContacts close_contacts(
+		  GetClosestContactsLocally(key, k_ + extra_contacts));
+	  FindNodesArgsPtr find_nodes_args(new FindNodesArgs(key, k_ + extra_contacts,
+		  close_contacts, default_private_key_, callback));
+	  StartLookup(find_nodes_args);
+}
 void NodeImpl::GetContact(const NodeId &node_id, GetContactFunctor callback) {
   if (node_id == contact_.node_id()) {
     asio_service_.post(std::bind(&NodeImpl::GetOwnContact, this, callback));

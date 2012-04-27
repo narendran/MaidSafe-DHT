@@ -74,10 +74,13 @@ class Commands {
   void FindNodesCallback(const int &result,
                          std::vector<Contact> contacts,
                          std::string path);
+  void GetPeersCallback(const int &result,
+                           std::vector<Contact> contacts);
   void Store50Values(const Arguments &args);
   void Store50Callback(const int &result,
                        const std::string &key,
                        uint16_t *returned_count);
+  void GetPeers();
   void PrintUsage();
   void ProcessCommand(const std::string &cmdline);
   void PrintRpcTimings();

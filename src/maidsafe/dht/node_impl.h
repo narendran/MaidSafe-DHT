@@ -169,6 +169,9 @@ class NodeImpl {
   /** Function to get a contact info from the Kademlia network.
    *  @param[in] node_id The node_id to locate
    *  @param[in] callback The callback to report the results. */
+
+  //Actual implementation of get peers
+  void GetPeers(FindNodesFunctor callback,const uint16_t &extra_contacts = 0);
   void GetContact(const NodeId &node_id, GetContactFunctor callback);
 
   // Setter for the functor which will be called by Node and Service to retrieve

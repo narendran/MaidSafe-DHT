@@ -101,6 +101,11 @@ void Node::FindNodes(const Key &key,
   pimpl_->FindNodes(key, callback, extra_contacts);
 }
 
+void Node::GetPeers(FindNodesFunctor callback,
+        const uint16_t &extra_contacts){
+	pimpl_-> GetPeers(callback, extra_contacts);
+}
+
 void Node::GetContact(const NodeId &node_id, GetContactFunctor callback) {
   pimpl_->GetContact(node_id, callback);
 }

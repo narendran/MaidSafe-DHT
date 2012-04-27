@@ -191,6 +191,11 @@ class Node {
                  FindNodesFunctor callback,
                  const uint16_t &extra_contacts = 0);
 
+  // Send back the list of all peers which are populated in the node's routing table
+  // This is just a mediation. Node_impl will have the actual implementation.
+  void GetPeers(FindNodesFunctor callback,const uint16_t &extra_contacts = 0);
+
+
   // Find the contact details of a node.  If the target node is not in this
   // node's routing table (and is not this node), a FindNode will be executed.
   // If the node is offline, a default-constructed Contact will be passed back

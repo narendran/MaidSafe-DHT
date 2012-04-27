@@ -28,6 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "maidsafe/dht/demo/commands.h"
 
 #include <iostream>  // NOLINT
+#include <sys/time.h>
 
 #include "boost/format.hpp"
 #include "boost/filesystem.hpp"
@@ -233,6 +234,19 @@ void Commands::GetContactsCallback(const int &result, Contact contact) {
   demo_node_->asio_service().post(mark_results_arrived_);
 }
 
+void Commands::GetPeers() {
+	struct timeval start,end;
+	gettimeofday(&start,NULL);
+	ULOG(INFO) << "Getting peers list from bootstrap_contacts";
+	demo_node_->node()->GetPeers(std::bind(&Commands::GetPeersCallback, this, args::_1, args::_2));
+	gettimeofday(&end,NULL);
+	ULOG(INFO) << boost::format("Start time is : %1% s %2% ms\nEnd time is : %3% s %4% ms")%(start.tv_sec)%(start.tv_usec)%(end.tv_sec)%(end.tv_usec);
+	if(start.tv_sec==end.tv_sec)
+		ULOG(INFO) << boost::format("\nTime taken : %1% milliseconds")%(end.tv_usec-start.tv_usec);
+	else
+		ULOG(INFO) << boost::format("\nTime taken : %1% milliseconds")%((end.tv_sec-start.tv_sec-1)*1000000 + ((1000000-start.tv_usec)+end.tv_usec));
+}
+
 void Commands::FindNodes(const Arguments &args, bool write_to_file) {
   std::string path;
   if (write_to_file) {
@@ -275,6 +289,20 @@ void Commands::FindNodesCallback(const int &result,
         content += ((*it).node_id().ToStringEncoded(NodeId::kBase64) + "\n");
       WriteFile(path, content);
     }
+  }
+  demo_node_->asio_service().post(mark_results_arrived_);
+}
+
+void Commands::GetPeersCallback(const int &result,
+                                 std::vector<Contact> contacts) {
+  if (result != transport::kSuccess) {
+    ULOG(ERROR) << "FindNodes operation failed with error code: " << result;
+  } else {
+
+      ULOG(INFO) << "Peers List : " << contacts.size()
+                << " contact(s):";
+      for (auto it = contacts.begin(); it != contacts.end(); ++it)
+        ULOG(INFO) << (*it).node_id().ToStringEncoded(NodeId::kBase64);
   }
   demo_node_->asio_service().post(mark_results_arrived_);
 }
@@ -330,6 +358,7 @@ void Commands::PrintUsage() {
   ULOG(INFO) << "\tgetinfo                           Print this node's info.";
   ULOG(INFO) << "\tgetcontact <node_id>              Get contact details of "
              << "node_id.";
+  ULOG(INFO) << "\tgetpeers							 Get Peers List";
   ULOG(INFO) << "\tstorefile <key> <filepath> <ttl>  Store contents of file in "
              << "the network.  ttl in minutes (-1 for infinite).";
   ULOG(INFO) << "\tstorevalue <key> <value> <ttl>    Store value in the "
@@ -401,6 +430,8 @@ void Commands::ProcessCommand(const std::string &cmdline) {
     ULOG(INFO) << "Exiting application...";
     finish_ = true;
     demo_node_->asio_service().post(mark_results_arrived_);
+  } else if (cmd == "getpeers") {
+	    GetPeers();
   } else {
     ULOG(ERROR) << "Invalid command: " << cmd;
     demo_node_->asio_service().post(mark_results_arrived_);
